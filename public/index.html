@@ -1,1 +1,874 @@
+<title>Loe Group Trip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f1efe4;
+    --paper-raised: #fffdf8;
+    --ink-text: #1d2129;
+    --muted: #6c6f74;
+    --line: #ddd7c6;
+    --brass: #a87526;
+    --brass-strong: #8a5f1c;
+    --shadow: rgba(30, 25, 10, 0.08);
+    --paid-bg: #e4f0e4; --paid-fg: #2c6b40;
+    --unpaid-bg: #fbe8dd; --unpaid-fg: #9a4a1f;
+    --hidden-bg: #eaeaef; --hidden-fg: #565b66;
+    --pending-bg: #f7ecd2; --pending-fg: #8a6a15;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #15181e;
+      --paper-raised: #1d212a;
+      --ink-text: #ece7d9;
+      --muted: #9aa0ac;
+      --line: #2c313c;
+      --brass: #d3a34f;
+      --brass-strong: #e6bb6c;
+      --shadow: rgba(0, 0, 0, 0.35);
+      --paid-bg: #1e3324; --paid-fg: #7fce9b;
+      --unpaid-bg: #3a2418; --unpaid-fg: #f0a878;
+      --hidden-bg: #2a2d35; --hidden-fg: #aeb3bd;
+      --pending-bg: #362c14; --pending-fg: #e7c266;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #15181e;
+    --paper-raised: #1d212a;
+    --ink-text: #ece7d9;
+    --muted: #9aa0ac;
+    --line: #2c313c;
+    --brass: #d3a34f;
+    --brass-strong: #e6bb6c;
+    --shadow: rgba(0, 0, 0, 0.35);
+    --paid-bg: #1e3324; --paid-fg: #7fce9b;
+    --unpaid-bg: #3a2418; --unpaid-fg: #f0a878;
+    --hidden-bg: #2a2d35; --hidden-fg: #aeb3bd;
+    --pending-bg: #362c14; --pending-fg: #e7c266;
+  }
 
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink-text);
+    font-family: "Public Sans", -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, .display { font-family: "Fraunces", Georgia, serif; text-wrap: balance; }
+  .mono, time, .num { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  a { color: inherit; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ---- marquee top bar ---- */
+  .marquee-rule {
+    height: 6px;
+    background: repeating-linear-gradient(90deg, var(--brass) 0 6px, transparent 6px 16px);
+    opacity: 0.55;
+  }
+  header.topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar-inner {
+    max-width: 920px; margin: 0 auto; padding: 18px 20px 14px;
+  }
+  .wordmark {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .wordmark h1 {
+    margin: 0; font-size: 1.7rem; font-weight: 600; font-style: italic; letter-spacing: 0.2px;
+  }
+  .wordmark .dates { color: var(--muted); font-size: 0.85rem; }
+  nav.tabs {
+    margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  .tab-group { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .tab-divider { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+  .pill-btn {
+    border: 1px solid var(--line); background: var(--paper-raised); color: var(--ink-text);
+    border-radius: 999px; padding: 6px 13px; font-size: 0.82rem; font-weight: 500;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .pill-btn:hover { border-color: var(--brass); color: var(--brass-strong); }
+  .pill-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 1px; }
+  .pill-btn.active { background: var(--ink-text); color: var(--paper); border-color: var(--ink-text); }
+  .pill-btn.person { display: inline-flex; align-items: center; gap: 6px; }
+  .pill-btn .badge {
+    background: var(--pending-fg); color: var(--pending-bg); border-radius: 999px;
+    font-size: 0.68rem; padding: 1px 6px; font-weight: 600;
+  }
+
+  main { max-width: 920px; margin: 0 auto; padding: 28px 20px 80px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ---- master / day sections ---- */
+  .day-block { margin-bottom: 34px; }
+  .day-heading {
+    display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--line);
+  }
+  .day-heading .weekday { font-size: 1.25rem; font-weight: 600; }
+  .day-heading .datestr { color: var(--muted); font-size: 0.9rem; }
+
+  .event-card {
+    display: grid; grid-template-columns: 96px 1fr; gap: 16px;
+    padding: 14px 4px; border-bottom: 1px solid var(--line);
+  }
+  .event-card:last-child { border-bottom: none; }
+  .event-time { color: var(--muted); font-size: 0.82rem; padding-top: 2px; }
+  .event-cat {
+    display: inline-block; border: 1px solid var(--line); border-radius: 5px;
+    font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 1px 6px; color: var(--muted); margin-top: 4px;
+  }
+  .event-title { font-weight: 600; font-size: 1rem; margin: 0 0 2px; }
+  .event-loc { color: var(--muted); font-size: 0.87rem; margin-bottom: 6px; }
+  .event-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .status-pill {
+    border-radius: 999px; font-size: 0.7rem; font-weight: 600; padding: 2px 9px;
+  }
+  .status-pill.paid { background: var(--paid-bg); color: var(--paid-fg); }
+  .status-pill.unpaid { background: var(--unpaid-bg); color: var(--unpaid-fg); }
+  .status-pill.hidden { background: var(--hidden-bg); color: var(--hidden-fg); }
+  .status-pill.pending { background: var(--pending-bg); color: var(--pending-fg); }
+  .conf-num { color: var(--muted); font-size: 0.78rem; }
+  .who-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
+  .who-chip {
+    border: 1px solid var(--line); background: var(--paper-raised); border-radius: 999px;
+    font-size: 0.74rem; padding: 2px 9px; color: var(--ink-text);
+  }
+  .who-chip:hover { border-color: var(--brass); color: var(--brass-strong); }
+  .event-notes { color: var(--muted); font-size: 0.83rem; font-style: italic; line-height: 1.5; }
+  .room-tag { color: var(--muted); font-size: 0.83rem; }
+
+  /* ---- person view ---- */
+  .person-header { margin-bottom: 8px; }
+  .person-header h2 { font-size: 2rem; margin: 0; font-weight: 600; }
+  .person-header .household { color: var(--muted); font-size: 0.9rem; margin-top: 2px; }
+  .back-link {
+    display: inline-block; margin-bottom: 18px; font-size: 0.85rem; color: var(--muted);
+    border: none; background: none; padding: 0; text-decoration: underline;
+  }
+  .back-link:hover { color: var(--brass-strong); }
+
+  .p-day { margin: 26px 0 6px; font-weight: 600; font-size: 1.05rem;
+    display: flex; align-items: baseline; gap: 10px; }
+  .p-day .datestr { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+  .p-row {
+    display: grid; grid-template-columns: 118px 1fr; gap: 14px;
+    padding: 10px 0; border-bottom: 1px solid var(--line);
+  }
+  .p-row:last-child { border-bottom: none; }
+  .p-label { font-weight: 600; color: var(--brass-strong); font-size: 0.88rem; padding-top: 1px; }
+  .p-detail .p-time { color: var(--muted); font-size: 0.8rem; margin-bottom: 2px; }
+  .p-detail .p-title { font-weight: 600; margin-bottom: 2px; }
+  .p-detail .p-loc { color: var(--muted); font-size: 0.87rem; margin-bottom: 4px; }
+  .p-detail .p-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 4px; }
+  .p-detail .p-notes { color: var(--muted); font-size: 0.82rem; font-style: italic; line-height: 1.5; }
+  .p-detail .p-together { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+
+  /* ---- open items ---- */
+  .oi-group { margin-bottom: 24px; }
+  .oi-group h3 { font-size: 1rem; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-family: "Public Sans", sans-serif; font-weight: 700; }
+  .oi-item { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .oi-item .oi-title { font-weight: 600; margin-bottom: 2px; }
+  .oi-item .oi-who { color: var(--muted); font-size: 0.85rem; margin-bottom: 3px; }
+  .oi-item .oi-notes { color: var(--muted); font-size: 0.83rem; line-height: 1.5; }
+  .oi-flag { padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 0.87rem; line-height: 1.55; color: var(--ink-text); }
+
+  footer {
+    max-width: 920px; margin: 0 auto; padding: 0 20px 40px; color: var(--muted); font-size: 0.78rem;
+  }
+
+  /* ---- edit affordance ---- */
+  .edit-btn {
+    border: 1px dashed var(--line); background: none; color: var(--muted);
+    border-radius: 999px; padding: 2px 10px; font-size: 0.72rem; font-weight: 500;
+    margin-top: 2px;
+  }
+  .edit-btn:hover { border-color: var(--brass); color: var(--brass-strong); border-style: solid; }
+  .last-edited { color: var(--muted); font-size: 0.74rem; margin-top: 4px; font-style: italic; }
+
+  /* ---- modal ---- */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(20, 17, 8, 0.45);
+    display: none; align-items: flex-start; justify-content: center;
+    padding: 40px 16px; z-index: 100; overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--paper-raised); border-radius: 10px; max-width: 460px; width: 100%;
+    padding: 22px 22px 18px; box-shadow: 0 10px 40px var(--shadow);
+  }
+  .modal-box h3 { margin: 0 0 2px; font-family: "Fraunces", Georgia, serif; }
+  .modal-sub { color: var(--muted); font-size: 0.82rem; margin: 0 0 16px; }
+  .modal-field { margin-bottom: 13px; }
+  .modal-field label {
+    display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px;
+  }
+  .modal-field input, .modal-field select, .modal-field textarea {
+    width: 100%; border: 1px solid var(--line); background: var(--paper); color: var(--ink-text);
+    border-radius: 6px; padding: 8px 10px; font-family: inherit; font-size: 0.9rem;
+  }
+  .modal-field textarea { resize: vertical; min-height: 60px; }
+  .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; gap: 10px; }
+  .modal-save {
+    background: var(--brass-strong); color: var(--paper-raised); border: none;
+    border-radius: 999px; padding: 8px 18px; font-weight: 600; font-size: 0.88rem;
+  }
+  .modal-save:hover { background: var(--brass); }
+  .modal-save:disabled { opacity: 0.6; cursor: default; }
+  .modal-cancel { background: none; border: none; color: var(--muted); font-size: 0.85rem; text-decoration: underline; }
+  .modal-status { font-size: 0.8rem; color: var(--muted); margin-top: 10px; min-height: 1.2em; }
+
+  .sync-note {
+    display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.78rem;
+    padding: 6px 20px 0; max-width: 920px; margin: 0 auto;
+  }
+
+  /* ---- update log ---- */
+  .log-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 18px; }
+  .log-btn-action {
+    background: var(--brass-strong); color: var(--paper-raised); border: none;
+    border-radius: 999px; padding: 8px 16px; font-weight: 600; font-size: 0.85rem;
+  }
+  .log-btn-action:hover { background: var(--brass); }
+  .log-btn-action.secondary { background: none; border: 1px solid var(--line); color: var(--ink-text); }
+  .log-btn-action.secondary:hover { border-color: var(--brass); color: var(--brass-strong); }
+  .log-status { color: var(--muted); font-size: 0.82rem; margin-bottom: 14px; min-height: 1.2em; }
+  .log-textarea {
+    width: 100%; min-height: 160px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--paper-raised); color: var(--ink-text); font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.82rem; padding: 12px; margin-bottom: 22px; white-space: pre-wrap;
+  }
+  .log-entry {
+    padding: 12px 0; border-bottom: 1px solid var(--line);
+  }
+  .log-entry .log-when { color: var(--muted); font-size: 0.76rem; margin-bottom: 2px; }
+  .log-entry .log-title { font-weight: 600; margin-bottom: 2px; }
+  .log-entry .log-fields { color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
+  .log-empty { color: var(--muted); font-size: 0.9rem; padding: 20px 0; }
+
+  @media (max-width: 560px) {
+    .event-card { grid-template-columns: 1fr; }
+    .event-time { padding-top: 0; }
+    .p-row { grid-template-columns: 1fr; gap: 4px; }
+    .wordmark h1 { font-size: 1.4rem; }
+  }
+</style>
+
+<div class="marquee-rule"></div>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="wordmark">
+      <h1>Loe Group Trip</h1>
+      <span class="dates mono">Aug 27 &ndash; Sep 3, 2026</span>
+    </div>
+    <nav class="tabs" id="tabs"></nav>
+  </div>
+</header>
+<div class="marquee-rule"></div>
+
+<main>
+  <section class="view active" id="view-master"></section>
+  <section class="view" id="view-person"></section>
+  <section class="view" id="view-open"></section>
+  <section class="view" id="view-log"></section>
+</main>
+
+<p class="sync-note" id="sync-note">Loading shared updates&hellip;</p>
+
+<footer>Saratoga Springs &middot; New York City &middot; Hudson Valley golf &mdash; Loe / Ralston / Hunter / Magdeburg / Wasinger &mdash; tap "Edit" on any item to add or fix details, visible to everyone with this link.</footer>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <h3 id="modal-title">Edit item</h3>
+    <p class="modal-sub" id="modal-sub"></p>
+    <div class="modal-field">
+      <label for="f-time">Time</label>
+      <input type="text" id="f-time" placeholder="e.g. 9:40 AM or TBD">
+    </div>
+    <div class="modal-field">
+      <label for="f-location">Location / details</label>
+      <input type="text" id="f-location" placeholder="Flight number, address, etc.">
+    </div>
+    <div class="modal-field">
+      <label for="f-room">Room / vehicle</label>
+      <input type="text" id="f-room" placeholder="e.g. 2 Queen Beds">
+    </div>
+    <div class="modal-field">
+      <label for="f-conf">Confirmation #</label>
+      <input type="text" id="f-conf" placeholder="Confirmation number">
+    </div>
+    <div class="modal-field">
+      <label for="f-pay">Payment status</label>
+      <select id="f-pay">
+        <option value="">Not set</option>
+        <option value="paid">Paid</option>
+        <option value="unpaid">Unpaid / pay at venue</option>
+        <option value="pending">Pending</option>
+        <option value="hidden">Hidden / not tracked</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label for="f-notes">Notes</label>
+      <textarea id="f-notes" placeholder="Anything else worth flagging"></textarea>
+    </div>
+    <div class="modal-field">
+      <label for="f-name">Your name (optional, shown as last editor)</label>
+      <input type="text" id="f-name" placeholder="e.g. Ed">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="modal-cancel">Cancel</button>
+      <button class="modal-save" id="modal-save">Save update</button>
+    </div>
+    <p class="modal-status" id="modal-status"></p>
+  </div>
+</div>
+
+<script id="trip-data" type="application/json">{"people": [{"code": "Danny", "name": "Danny Loe", "household": "Loe"}, {"code": "Brooke", "name": "Brooke Loe", "household": "Loe"}, {"code": "Ed", "name": "Ed Ralston", "household": "Ralston"}, {"code": "Stacy", "name": "Stacy Ralston", "household": "Ralston"}, {"code": "Bo", "name": "Bo Hunter", "household": "Hunter"}, {"code": "Kim", "name": "Kim Hunter", "household": "Hunter"}, {"code": "JR", "name": "JR Magdeburg", "household": "Magdeburg"}, {"code": "Lauren", "name": "Lauren Magdeburg", "household": "Magdeburg"}, {"code": "Cole", "name": "Cole Wasinger", "household": "Wasinger"}, {"code": "Neely", "name": "Neely Wasinger", "household": "Wasinger"}], "days": [{"date": "2026-08-27", "weekday": "Thu", "label": "Aug 27"}, {"date": "2026-08-28", "weekday": "Fri", "label": "Aug 28"}, {"date": "2026-08-29", "weekday": "Sat", "label": "Aug 29"}, {"date": "2026-08-30", "weekday": "Sun", "label": "Aug 30"}, {"date": "2026-08-31", "weekday": "Mon", "label": "Aug 31"}, {"date": "2026-09-01", "weekday": "Tue", "label": "Sep 1"}, {"date": "2026-09-02", "weekday": "Wed", "label": "Sep 2"}, {"date": "2026-09-03", "weekday": "Thu", "label": "Sep 3"}], "events": [{"id": 0, "dates": ["2026-08-27"], "time": "12:39 PM", "category": "Flight", "title": "Flight to Albany", "location": "XNA to PHL to ALB - AA 5543 (First, 2D/2F) + AA 5823 (Economy, 6B/6C), arrives ALB 7:05 PM", "room": null, "who": ["Danny", "Brooke"], "whoNames": ["Danny Loe", "Brooke Loe"], "conf": "FRXJNQ", "confFlag": null, "prepaid": "Danny (Mastercard ...9179)", "payStatus": "PAID - $1,472.62 (covers outbound + return, both pax)", "payPill": {"label": "Paid", "kind": "paid"}, "notes": "AAdvantage: Danny 2BR4910, Brooke 41X8J70. This confirmation covers the round trip - see the Sep 3 return below."}, {"id": 1, "dates": ["2026-08-27"], "time": "TBD", "category": "Flight", "title": "Flight to Albany", "location": "Home to Albany, NY", "room": null, "who": ["Ed", "Stacy"], "whoNames": ["Ed Ralston", "Stacy Ralston"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Placeholder - flight info needed."}, {"id": 2, "dates": ["2026-08-27"], "time": "TBD", "category": "Flight", "title": "Flight to Albany", "location": "Home to Albany, NY", "room": null, "who": ["Bo", "Kim"], "whoNames": ["Bo Hunter", "Kim Hunter"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Placeholder - flight info needed."}, {"id": 3, "dates": ["2026-08-27"], "time": "TBD", "category": "Flight", "title": "Flight to Albany", "location": "Home to Albany, NY", "room": null, "who": ["JR", "Lauren"], "whoNames": ["JR Magdeburg", "Lauren Magdeburg"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Placeholder - flight info needed."}, {"id": 4, "dates": ["2026-08-27"], "time": "TBD", "category": "Drive", "title": "Hertz SUV #1 pickup", "location": "Albany, NY (airport - TBD)", "room": "SUV", "who": ["Danny", "Brooke", "Ed", "Stacy", "Bo", "Kim", "JR", "Lauren"], "whoNames": ["Danny Loe", "Brooke Loe", "Ed Ralston", "Stacy Ralston", "Bo Hunter", "Kim Hunter", "JR Magdeburg", "Lauren Magdeburg"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "One of two SUVs for the group of 8."}, {"id": 5, "dates": ["2026-08-27"], "time": "TBD", "category": "Drive", "title": "Hertz SUV #2 pickup", "location": "Albany, NY (airport - TBD)", "room": "SUV", "who": ["Danny", "Brooke", "Ed", "Stacy", "Bo", "Kim", "JR", "Lauren"], "whoNames": ["Danny Loe", "Brooke Loe", "Ed Ralston", "Stacy Ralston", "Bo Hunter", "Kim Hunter", "JR Magdeburg", "Lauren Magdeburg"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Second SUV for the group of 8."}, {"id": 6, "dates": ["2026-08-27", "2026-08-28", "2026-08-29"], "time": "Check-in 3:00 PM", "category": "Stay", "title": "Airbnb - Saratoga Springs", "location": "10 Laura Lane, Saratoga Springs, NY 12866 (host: Skip)", "room": "Whole home, 8 guest max", "who": ["Danny", "Brooke", "Ed", "Stacy", "Bo", "Kim", "JR", "Lauren"], "whoNames": ["Danny Loe", "Brooke Loe", "Ed Ralston", "Stacy Ralston", "Bo Hunter", "Kim Hunter", "JR Magdeburg", "Lauren Magdeburg"], "conf": "HMFZQP82WH", "confFlag": null, "prepaid": "Danny (booked under his Airbnb account)", "payStatus": "PAID IN FULL - $5,128.45", "payPill": {"label": "Paid", "kind": "paid"}, "notes": "Non-refundable rate. Checkout Sunday 11:00 AM. Confirmed via Danny's Airbnb account - verify room/bed assignments with host Skip if it matters who gets which bedroom."}, {"id": 7, "dates": ["2026-08-29"], "time": "TBD", "category": "Flight", "title": "Flight to NYC", "location": "Home to New York City", "room": null, "who": ["Cole", "Neely"], "whoNames": ["Cole Wasinger", "Neely Wasinger"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Placeholder - flight info needed."}, {"id": 8, "dates": ["2026-08-29"], "time": "Night", "category": "Stay", "title": "Martinique - arrival night", "location": "The Martinique New York, NYC", "room": "1 King Bed", "who": ["Cole", "Neely"], "whoNames": ["Cole Wasinger", "Neely Wasinger"], "conf": "3521495361", "confFlag": null, "prepaid": "Danny's card on file - guarantee only", "payStatus": "NOT PAID - pay at hotel ($427.62 total)", "payPill": {"label": "Unpaid", "kind": "unpaid"}, "notes": "Booked under Danny's Hilton Honors account; Honors Discount Semi-Flex rate. Hilton's record lists Danny Loe + Cole Wasinger as guests - confirm Neely is also noted at check-in."}, {"id": 9, "dates": ["2026-08-30"], "time": "AM", "category": "Drive", "title": "Return SUVs to Manhattan", "location": "Saratoga Springs to Hertz, W 34th St (near Penn Station)", "room": null, "who": ["Danny", "Brooke", "Ed", "Stacy", "Bo", "Kim", "JR", "Lauren"], "whoNames": ["Danny Loe", "Brooke Loe", "Ed Ralston", "Stacy Ralston", "Bo Hunter", "Kim Hunter", "JR Magdeburg", "Lauren Magdeburg"], "conf": "See Thu pickup conf #s", "confFlag": null, "prepaid": null, "payStatus": null, "payPill": null, "notes": "Drop-off, not a new rental - confirm the same conf #s cover the return."}, {"id": 10, "dates": ["2026-08-30"], "time": "3:00 PM", "category": "Show", "title": "MJ the Musical", "location": "Neil Simon Theatre, 250 West 52nd Street, NYC", "room": null, "who": ["Danny", "Brooke", "Ed", "Stacy", "Bo", "Kim", "JR", "Lauren", "Cole", "Neely"], "whoNames": ["Danny Loe", "Brooke Loe", "Ed Ralston", "Stacy Ralston", "Bo Hunter", "Kim Hunter", "JR Magdeburg", "Lauren Magdeburg", "Cole Wasinger", "Neely Wasinger"], "conf": "Order #518088330 (Broadway Inbound)", "confFlag": null, "prepaid": "Danny (Mastercard ...9179)", "payStatus": "PAID IN FULL - $2,790.00", "payPill": {"label": "Paid", "kind": "paid"}, "notes": "10 Premium Orchestra seats, A101-110, $279/seat. Group sale is final - no cancellations, refunds, or exchanges. Order notes allow splitting into sections on even numbers, but not splitting pairs."}, {"id": 11, "dates": ["2026-08-30"], "time": "6:30 PM", "category": "Dine", "title": "Dinner reservation", "location": "Strip House Midtown, NYC", "room": null, "who": ["Danny", "Brooke", "Ed", "Stacy", "Bo", "Kim", "JR", "Lauren", "Cole", "Neely"], "whoNames": ["Danny Loe", "Brooke Loe", "Ed Ralston", "Stacy Ralston", "Bo Hunter", "Kim Hunter", "JR Magdeburg", "Lauren Magdeburg", "Cole Wasinger", "Neely Wasinger"], "conf": "2110086645 (table of 6, Danny) + 2110086646 (table of 4, Brooke)", "confFlag": null, "prepaid": null, "payStatus": "NEED INFO - neither OpenTable confirmation shows payment", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Booked as two separate OpenTable reservations, both Sunday 6:30 PM at Strip House Midtown, 15 W 44th St. Table of 6 under Danny Loe (conf 2110086645) + table of 4 under Brooke Loe (conf 2110086646) = 10 total, covers the whole group. Restaurant phone on file: 336-5454."}, {"id": 12, "dates": ["2026-08-30"], "time": "Night", "category": "Stay", "title": "Martinique - Danny & Brooke", "location": "The Martinique New York, NYC", "room": "2 Queen Beds", "who": ["Danny", "Brooke"], "whoNames": ["Danny Loe", "Brooke Loe"], "conf": "3520950406", "confFlag": null, "prepaid": "Not yet charged", "payStatus": "NOT PAID YET - rate shown as Confidential", "payPill": {"label": "Unpaid", "kind": "unpaid"}, "notes": "Room 1 of 5 on this confirmation. Verified via 5 separate Hilton emails, all sent Aug 7 at 11:15 AM under the same number - consistent with a 5-room booking. Each email generically shows 'Guest: Brooke Loe' since the other names were added later by phone."}, {"id": 13, "dates": ["2026-08-30"], "time": "Night", "category": "Stay", "title": "Martinique - Megan Mikulencak", "location": "The Martinique New York, NYC", "room": "2 Queen Beds", "who": ["Megan"], "whoNames": ["Megan Mikulencak"], "conf": "3520950406", "confFlag": null, "prepaid": "Not yet charged", "payStatus": "NOT PAID YET", "payPill": {"label": "Unpaid", "kind": "unpaid"}, "notes": "Room 2 of 5 on this confirmation. Friend of Brooke's, not on the main traveler list. Stays with Brooke Monday-Wednesday after this Sunday night."}, {"id": 14, "dates": ["2026-08-30"], "time": "Night", "category": "Stay", "title": "Martinique - Ed & Stacy", "location": "The Martinique New York, NYC", "room": "2 Queen Beds", "who": ["Ed", "Stacy"], "whoNames": ["Ed Ralston", "Stacy Ralston"], "conf": "3520950406", "confFlag": null, "prepaid": "Not yet charged", "payStatus": "NOT PAID YET", "payPill": {"label": "Unpaid", "kind": "unpaid"}, "notes": "Room 3 of 5 on this confirmation, per Danny's room-assignment email to Kate Hendrickson."}, {"id": 15, "dates": ["2026-08-30"], "time": "Night", "category": "Stay", "title": "Martinique - Bo & Kim", "location": "The Martinique New York, NYC", "room": "2 Queen Beds", "who": ["Bo", "Kim"], "whoNames": ["Bo Hunter", "Kim Hunter"], "conf": "3520950406", "confFlag": null, "prepaid": "Not yet charged", "payStatus": "NOT PAID YET", "payPill": {"label": "Unpaid", "kind": "unpaid"}, "notes": "Room 4 of 5 on this confirmation, per Danny's room-assignment email to Kate Hendrickson."}, {"id": 16, "dates": ["2026-08-30"], "time": "Night", "category": "Stay", "title": "Martinique - JR & Lauren", "location": "The Martinique New York, NYC", "room": "2 Queen Beds", "who": ["JR", "Lauren"], "whoNames": ["JR Magdeburg", "Lauren Magdeburg"], "conf": "3520950406", "confFlag": null, "prepaid": "Not yet charged", "payStatus": "NOT PAID YET", "payPill": {"label": "Unpaid", "kind": "unpaid"}, "notes": "Room 5 of 5 on this confirmation, per Danny's room-assignment email to Kate Hendrickson."}, {"id": 17, "dates": ["2026-08-30"], "time": "Night", "category": "Stay", "title": "Martinique - Cole & Neely", "location": "The Martinique New York, NYC", "room": "1 King Bed", "who": ["Cole", "Neely"], "whoNames": ["Cole Wasinger", "Neely Wasinger"], "conf": "3515627522", "confFlag": null, "prepaid": "Danny (Mastercard ...9179)", "payStatus": "PAID IN FULL - $238.45", "payPill": {"label": "Paid", "kind": "paid"}, "notes": "Booked separately from the Saturday-night room. Non-refundable rate, charged immediately. Hilton's record still only shows Danny Loe - still need to add Cole & Neely's names at check-in."}, {"id": 18, "dates": ["2026-08-31"], "time": "TBD", "category": "Flight", "title": "Flight home", "location": "New York City to home", "room": null, "who": ["Stacy", "Kim", "Lauren"], "whoNames": ["Stacy Ralston", "Kim Hunter", "Lauren Magdeburg"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Placeholder - flight info needed."}, {"id": 19, "dates": ["2026-08-31", "2026-09-01", "2026-09-02", "2026-09-03"], "time": "4 nights", "category": "Stay", "title": "Martinique - Brooke's room", "location": "The Martinique New York, NYC", "room": "2 Queen Deluxe", "who": ["Brooke"], "whoNames": ["Brooke Loe"], "conf": "3481126053", "confFlag": null, "prepaid": "Brooke (payment method not shown)", "payStatus": "HIDDEN - Hilton marks the price Confidential on this record", "payPill": {"label": "Hidden", "kind": "hidden"}, "notes": "Booked under Brooke's own Hilton account. Free cancellation before midnight 9/1/26. Megan Mikulencak stays with Brooke Monday-Wednesday; Danny joins Brooke Wednesday night after golf."}, {"id": 20, "dates": ["2026-08-31", "2026-09-01", "2026-09-02", "2026-09-03"], "time": "4 nights", "category": "Stay", "title": "Martinique - Cole & Neely's room", "location": "The Martinique New York, NYC", "room": "Not specified", "who": ["Cole", "Neely"], "whoNames": ["Cole Wasinger", "Neely Wasinger"], "conf": "3515591042", "confFlag": null, "prepaid": "Unclear - booked via Brooke's Hilton Honors #", "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Booked under guest name Cole Wasinger for Aug 31-Sep 3, arranged through Kate Hendrickson. Cole stays with Neely."}, {"id": 21, "dates": ["2026-08-31"], "time": "1:30 & 1:40 PM", "category": "Golf", "title": "Hudson National", "location": "Hudson National Golf Club", "room": null, "who": ["Danny", "Ed", "Bo", "Cole", "JR", "Andy", "Paul", "Tank"], "whoNames": ["Danny Loe", "Ed Ralston", "Bo Hunter", "Cole Wasinger", "JR Magdeburg", "Andy", "Paul", "Tank"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Two tee times: 1:30 PM (Cole, Ed, Danny, Bo) and 1:40 PM (JR, Andy, Paul, Tank). Andy, Paul, and Tank are guest golfers not on the main traveler list. Tee time still needs a confirmation #."}, {"id": 22, "dates": ["2026-08-31"], "time": "Night", "category": "Stay", "title": "Tarrytown House Estate", "location": "Tarrytown House Estate, Tarrytown, NY (phone 914-591-8200)", "room": "3 rooms: 2 Estate King (Danny, Bo) + 1 Estate Double (Cole & Ed sharing)", "who": ["Danny", "Ed", "Bo", "Cole"], "whoNames": ["Danny Loe", "Ed Ralston", "Bo Hunter", "Cole Wasinger"], "conf": "12309SG308970 + 12309SG308971 + 12309SG308972", "confFlag": null, "prepaid": null, "payStatus": "NEED INFO - confirmations don't show rate or payment status", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "3 rooms, single continuous 2-night reservation covering both Monday and Tuesday night \u2014 see Tuesday's entry. Danny and Bo each have their own room; Cole and Ed are sharing the Estate Double. JR is arranging his own lodging separately \u2014 see his own entry."}, {"id": 23, "dates": ["2026-09-01"], "time": "9:30 & 9:40 AM", "category": "Golf", "title": "Sleepy Hollow", "location": "Sleepy Hollow Country Club", "room": null, "who": ["Danny", "Ed", "Bo", "Cole", "JR", "Andy", "Paul"], "whoNames": ["Danny Loe", "Ed Ralston", "Bo Hunter", "Cole Wasinger", "JR Magdeburg", "Andy", "Paul"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Two tee times: 9:30 AM and 9:40 AM. Pairings TBD. Lunch afterward. Cole, Andy, and Paul are playing this round. Tank is only playing Hudson National Monday, not this round. Tee time still needs a confirmation #."}, {"id": 24, "dates": ["2026-09-01"], "time": "Night", "category": "Stay", "title": "Tarrytown House Estate", "location": "Tarrytown House Estate, Tarrytown, NY (phone 914-591-8200)", "room": "3 rooms: 2 Estate King (Danny, Bo) + 1 Estate Double (Cole & Ed sharing)", "who": ["Danny", "Ed", "Bo", "Cole"], "whoNames": ["Danny Loe", "Ed Ralston", "Bo Hunter", "Cole Wasinger"], "conf": "12309SG308970 + 12309SG308971 + 12309SG308972", "confFlag": null, "prepaid": null, "payStatus": "NEED INFO - confirmations don't show rate or payment status", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Same single 2-night reservation as Monday night \u2014 checkout Wednesday 9/2 before 11:00 AM. Cole is playing all three golf rounds and traveling with Ed, Bo, and Danny for the golf portion of the trip."}, {"id": 25, "dates": ["2026-09-01"], "time": "Night", "category": "Personal", "title": "Back to Manhattan (own arrangements)", "location": "Manhattan, NYC", "room": null, "who": ["JR"], "whoNames": ["JR Magdeburg"], "conf": "Not tracked", "confFlag": {"label": "Not tracked", "kind": "hidden"}, "prepaid": null, "payStatus": null, "payPill": null, "notes": "JR heads back into the city with his father Tuesday night; lodging arranged on his own - not tracked here."}, {"id": 26, "dates": ["2026-09-02"], "time": "1:20 & 1:30 PM", "category": "Golf", "title": "Metropolis", "location": "Metropolis Golf Club (confirm name)", "room": null, "who": ["Danny", "Ed", "Bo", "Cole", "JR"], "whoNames": ["Danny Loe", "Ed Ralston", "Bo Hunter", "Cole Wasinger", "JR Magdeburg"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Two tee times: 1:20 PM and 1:30 PM. Lunch before. JR heads back up from Manhattan to play. Cole is playing this round too. Tee time still needs a confirmation #."}, {"id": 27, "dates": ["2026-09-02"], "time": "Night", "category": "Stay", "title": "Martinique - with Brooke", "location": "The Martinique New York, NYC", "room": "2 Queen Deluxe", "who": ["Danny"], "whoNames": ["Danny Loe"], "conf": "Uses Brooke's reservation (3481126053)", "confFlag": null, "prepaid": null, "payStatus": null, "payPill": null, "notes": "Danny rejoins Brooke, using her Monday-Thursday reservation."}, {"id": 28, "dates": ["2026-09-02"], "time": "Night", "category": "Stay", "title": "Martinique - Ed & Bo", "location": "The Martinique New York, NYC", "room": "2 Double Beds", "who": ["Ed", "Bo"], "whoNames": ["Ed Ralston", "Bo Hunter"], "conf": "3526857171", "confFlag": null, "prepaid": "Danny (Mastercard ...9179)", "payStatus": "PAID IN FULL - $456.22", "payPill": {"label": "Paid", "kind": "paid"}, "notes": "Non-refundable rate, charged immediately. Hilton's record shows Danny Loe + Ed Ralston - confirm Bo is also noted at check-in."}, {"id": 29, "dates": ["2026-09-02"], "time": "Night", "category": "Personal", "title": "Hotel TBD (own arrangements)", "location": "Near Metropolis Golf Club", "room": "TBD", "who": ["JR"], "whoNames": ["JR Magdeburg"], "conf": "Not tracked", "confFlag": {"label": "Not tracked", "kind": "hidden"}, "prepaid": null, "payStatus": null, "payPill": null, "notes": "JR's lodging after Wednesday golf isn't tracked here - he does not fly home Thursday with the group."}, {"id": 30, "dates": ["2026-09-03"], "time": "1:51 PM", "category": "Flight", "title": "Flight home", "location": "LGA to XNA - AA 4472 (First, 2D/2F), arrives 4:11 PM", "room": null, "who": ["Danny", "Brooke"], "whoNames": ["Danny Loe", "Brooke Loe"], "conf": "FRXJNQ", "confFlag": null, "prepaid": "Danny (Mastercard ...9179)", "payStatus": "PAID (same total as outbound)", "payPill": {"label": "Paid", "kind": "paid"}, "notes": "Same reservation as the Aug 27 outbound flight."}, {"id": 31, "dates": ["2026-09-03"], "time": "TBD", "category": "Flight", "title": "Flight home", "location": "New York City to home", "room": null, "who": ["Ed", "Bo", "Cole", "Neely"], "whoNames": ["Ed Ralston", "Bo Hunter", "Cole Wasinger", "Neely Wasinger"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Placeholder - flight info needed."}, {"id": 32, "dates": ["2026-08-27"], "time": "TBD", "category": "Dine", "title": "Dinner reservation", "location": "Saratoga Springs, NY (restaurant TBD)", "room": null, "who": ["Danny", "Brooke", "Ed", "Stacy", "Bo", "Kim", "JR", "Lauren"], "whoNames": ["Danny Loe", "Brooke Loe", "Ed Ralston", "Stacy Ralston", "Bo Hunter", "Kim Hunter", "JR Magdeburg", "Lauren Magdeburg"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Placeholder - restaurant and reservation needed. Whole Saratoga group (8)."}, {"id": 33, "dates": ["2026-08-28"], "time": "TBD", "category": "Dine", "title": "Dinner reservation", "location": "Saratoga Springs, NY (restaurant TBD)", "room": null, "who": ["Danny", "Brooke", "Ed", "Stacy", "Bo", "Kim", "JR", "Lauren"], "whoNames": ["Danny Loe", "Brooke Loe", "Ed Ralston", "Stacy Ralston", "Bo Hunter", "Kim Hunter", "JR Magdeburg", "Lauren Magdeburg"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Placeholder - restaurant and reservation needed. Whole Saratoga group (8)."}, {"id": 34, "dates": ["2026-08-29"], "time": "TBD", "category": "Dine", "title": "Dinner reservation", "location": "Saratoga Springs, NY (restaurant TBD)", "room": null, "who": ["Danny", "Brooke", "Ed", "Stacy", "Bo", "Kim", "JR", "Lauren"], "whoNames": ["Danny Loe", "Brooke Loe", "Ed Ralston", "Stacy Ralston", "Bo Hunter", "Kim Hunter", "JR Magdeburg", "Lauren Magdeburg"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Placeholder - restaurant and reservation needed. Whole Saratoga group (8)."}, {"id": 35, "dates": ["2026-08-31"], "time": "TBD", "category": "Dine", "title": "Dinner - Hudson National", "location": "Hudson National Golf Club (restaurant/clubhouse - confirm exact reservation details)", "room": null, "who": ["Danny", "Ed", "Bo", "Cole", "JR", "Andy", "Paul", "Tank"], "whoNames": ["Danny Loe", "Ed Ralston", "Bo Hunter", "Cole Wasinger", "JR Magdeburg", "Andy", "Paul", "Tank"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "After Hudson National golf. Coat requested, maybe tie \u2014 confirm dress code before the trip. Time and reservation still needed."}, {"id": 36, "dates": ["2026-09-01"], "time": "TBD", "category": "Dine", "title": "Lunch after Sleepy Hollow", "location": "TBD", "room": null, "who": ["Danny", "Ed", "Bo", "Cole", "JR"], "whoNames": ["Danny Loe", "Ed Ralston", "Bo Hunter", "Cole Wasinger", "JR Magdeburg"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Lunch after the Sleepy Hollow round. Location and reservation still needed."}, {"id": 37, "dates": ["2026-09-02"], "time": "TBD", "category": "Dine", "title": "Lunch before Metropolis", "location": "TBD", "room": null, "who": ["Danny", "Ed", "Bo", "Cole", "JR"], "whoNames": ["Danny Loe", "Ed Ralston", "Bo Hunter", "Cole Wasinger", "JR Magdeburg"], "conf": null, "confFlag": {"label": "Needs confirmation #", "kind": "pending"}, "prepaid": null, "payStatus": "NEED INFO", "payPill": {"label": "Pending", "kind": "pending"}, "notes": "Lunch before the Metropolis round. Location and reservation still needed."}, {"id": 38, "dates": ["2026-08-31"], "time": "Night", "category": "Personal", "title": "Golf-trip lodging (own arrangements)", "location": "Near Hudson National, NY", "room": null, "who": ["JR"], "whoNames": ["JR Magdeburg"], "conf": "Not tracked", "confFlag": {"label": "Not tracked", "kind": "hidden"}, "prepaid": null, "payStatus": null, "payPill": null, "notes": "JR is booking his own lodging for Monday night separately from the group's Tarrytown House Estate reservation \u2014 not tracked here."}, {"id": 39, "dates": ["2026-09-02"], "time": "Night", "category": "Stay", "title": "Martinique - with Neely", "location": "The Martinique New York, NYC", "room": "Not specified", "who": ["Cole"], "whoNames": ["Cole Wasinger"], "conf": "Uses Cole & Neely's reservation (3515591042)", "confFlag": null, "prepaid": null, "payStatus": null, "payPill": null, "notes": "Cole rejoins Neely at their existing Monday-Thursday Martinique reservation after Wednesday's Metropolis round \u2014 same pattern as Danny rejoining Brooke."}]}</script>
+<script>
+(function () {
+  const DATA = JSON.parse(document.getElementById('trip-data').textContent);
+  const byDate = {};
+  DATA.days.forEach(d => byDate[d.date] = d);
+
+  function fmtWho(codes) {
+    return codes.map(c => {
+      if (c === 'Megan') return 'Megan Mikulencak';
+      const p = DATA.people.find(pp => pp.code === c);
+      return p ? p.name : c;
+    });
+  }
+
+  function personFirst(code) {
+    if (code === 'Megan') return 'Megan';
+    const p = DATA.people.find(pp => pp.code === code);
+    return p ? p.name.split(' ')[0] : code;
+  }
+
+  // ---------- top nav ----------
+  const tabs = document.getElementById('tabs');
+  const households = {};
+  DATA.people.forEach(p => { (households[p.household] = households[p.household] || []).push(p); });
+
+  const pendingCount = DATA.events.filter(e => (e.confFlag && e.confFlag.kind === 'pending') ||
+    (e.payPill && (e.payPill.kind === 'pending' || e.payPill.kind === 'unpaid'))).length;
+
+  function pill(label, onClick, extraClass, badge) {
+    const b = document.createElement('button');
+    b.className = 'pill-btn' + (extraClass ? ' ' + extraClass : '');
+    b.textContent = label;
+    if (badge) {
+      const sp = document.createElement('span');
+      sp.className = 'badge';
+      sp.textContent = badge;
+      b.appendChild(sp);
+    }
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  const groupMaster = document.createElement('div');
+  groupMaster.className = 'tab-group';
+  groupMaster.appendChild(pill('Overview', () => showMaster(), 'master-btn'));
+  tabs.appendChild(groupMaster);
+
+  const div1 = document.createElement('div');
+  div1.className = 'tab-divider';
+  tabs.appendChild(div1);
+
+  Object.keys(households).forEach((hh, i) => {
+    const g = document.createElement('div');
+    g.className = 'tab-group';
+    households[hh].forEach(p => {
+      g.appendChild(pill(p.name.split(' ')[0], () => showPerson(p.code), 'person person-btn', null));
+    });
+    tabs.appendChild(g);
+    if (i < Object.keys(households).length - 1) {
+      const d = document.createElement('div');
+      d.className = 'tab-divider';
+      tabs.appendChild(d);
+    }
+  });
+
+  const div2 = document.createElement('div');
+  div2.className = 'tab-divider';
+  tabs.appendChild(div2);
+  const openBtn = pill('Open Items', () => showOpen(), 'open-btn', pendingCount ? String(pendingCount) : null);
+  tabs.appendChild(openBtn);
+  const logBtn = pill('Update Log', () => showLog(), 'log-btn', null);
+  tabs.appendChild(logBtn);
+
+  function updateLogBadge(count) {
+    let sp = logBtn.querySelector('.badge');
+    if (!count) { if (sp) sp.remove(); return; }
+    if (!sp) { sp = document.createElement('span'); sp.className = 'badge'; logBtn.appendChild(sp); }
+    sp.textContent = String(count);
+  }
+
+  function updateOpenBadge(count) {
+    let sp = openBtn.querySelector('.badge');
+    if (!count) { if (sp) sp.remove(); return; }
+    if (!sp) { sp = document.createElement('span'); sp.className = 'badge'; openBtn.appendChild(sp); }
+    sp.textContent = String(count);
+  }
+
+  function setActive(btnPredicate) {
+    tabs.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+  }
+
+  // ---------- master view ----------
+  const viewMaster = document.getElementById('view-master');
+  const viewPerson = document.getElementById('view-person');
+  const viewOpen = document.getElementById('view-open');
+
+  function statusPillHtml(pillObj) {
+    if (!pillObj) return '';
+    return `<span class="status-pill ${pillObj.kind}">${pillObj.label}</span>`;
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function lastEditedHtml(ev) {
+    if (!ev.lastEdited) return '';
+    const by = ev.lastEdited.by ? escapeHtml(ev.lastEdited.by) : 'someone';
+    return `<div class="last-edited">Last updated by ${by}</div>`;
+  }
+
+  function eventCardHtml(ev, opts) {
+    opts = opts || {};
+    const who = opts.hideWho ? '' : `<div class="who-chips">${ev.who.map(c => `<button class="who-chip" data-goto="${c}">${personFirst(c)}</button>`).join('')}</div>`;
+    const room = ev.room ? `<span class="room-tag">${ev.room}</span>` : '';
+    const conf = ev.conf ? `<span class="conf-num mono">#${escapeHtml(ev.conf)}</span>` : (ev.confFlag ? `<span class="status-pill ${ev.confFlag.kind}">${escapeHtml(ev.confFlag.label)}</span>` : '');
+    return `
+      <div class="event-card">
+        <div>
+          <div class="event-time mono">${escapeHtml(ev.time)}</div>
+          <div class="event-cat">${escapeHtml(ev.category)}</div>
+        </div>
+        <div>
+          <p class="event-title">${escapeHtml(ev.title)}</p>
+          <p class="event-loc">${escapeHtml(ev.location)}${ev.room ? ' &middot; ' + escapeHtml(ev.room) : ''}</p>
+          ${who}
+          <div class="event-meta">${statusPillHtml(ev.payPill)}${conf}</div>
+          ${ev.notes ? `<p class="event-notes">${escapeHtml(ev.notes)}</p>` : ''}
+          ${lastEditedHtml(ev)}
+          <button class="edit-btn" data-edit="${ev.id}">&#9998; Edit</button>
+        </div>
+      </div>`;
+  }
+
+  function renderMaster() {
+    let html = '';
+    DATA.days.forEach(day => {
+      const evs = DATA.events.filter(e => e.dates.includes(day.date));
+      if (!evs.length) return;
+      html += `<div class="day-block"><div class="day-heading"><span class="weekday">${day.weekday}</span><span class="datestr mono">${day.label}, 2026</span></div>`;
+      evs.forEach(ev => { html += eventCardHtml(ev); });
+      html += `</div>`;
+    });
+    viewMaster.innerHTML = html;
+    viewMaster.querySelectorAll('[data-goto]').forEach(el => {
+      el.addEventListener('click', () => showPerson(el.getAttribute('data-goto')));
+    });
+    viewMaster.querySelectorAll('[data-edit]').forEach(el => {
+      el.addEventListener('click', () => openEditModal(Number(el.getAttribute('data-edit'))));
+    });
+  }
+
+  // ---------- person view ----------
+  function renderPerson(code) {
+    const person = DATA.people.find(p => p.code === code) || { name: code, household: '' };
+    const evs = DATA.events.filter(e => e.who.includes(code));
+    let html = `<div class="person-header"><button class="back-link" id="back-to-master">&larr; Overview</button>
+      <h2>${person.name}</h2><div class="household">${person.household ? person.household + ' household' : ''}</div></div>`;
+
+    DATA.days.forEach(day => {
+      const dayEvs = evs.filter(e => e.dates.includes(day.date));
+      if (!dayEvs.length) return;
+      html += `<div class="p-day">${day.weekday}<span class="datestr mono">${day.label}, 2026</span></div>`;
+      dayEvs.forEach(ev => {
+        const others = ev.who.filter(c => c !== code).map(personFirst);
+        const conf = ev.conf ? `<span class="conf-num mono">#${escapeHtml(ev.conf)}</span>` : (ev.confFlag ? `<span class="status-pill ${ev.confFlag.kind}">${escapeHtml(ev.confFlag.label)}</span>` : '');
+        html += `<div class="p-row">
+          <div class="p-label">${escapeHtml(ev.category)}</div>
+          <div class="p-detail">
+            <div class="p-time mono">${escapeHtml(ev.time)}</div>
+            <div class="p-title">${escapeHtml(ev.title)}</div>
+            <div class="p-loc">${escapeHtml(ev.location)}${ev.room ? ' &middot; ' + escapeHtml(ev.room) : ''}</div>
+            <div class="p-meta">${statusPillHtml(ev.payPill)}${conf}</div>
+            ${ev.notes ? `<div class="p-notes">${escapeHtml(ev.notes)}</div>` : ''}
+            ${others.length ? `<div class="p-together">With ${others.join(', ')}</div>` : ''}
+            ${lastEditedHtml(ev)}
+            <button class="edit-btn" data-edit="${ev.id}">&#9998; Edit</button>
+          </div>
+        </div>`;
+      });
+    });
+    viewPerson.innerHTML = html;
+    document.getElementById('back-to-master').addEventListener('click', showMaster);
+    viewPerson.querySelectorAll('[data-edit]').forEach(el => {
+      el.addEventListener('click', () => openEditModal(Number(el.getAttribute('data-edit'))));
+    });
+  }
+
+  // ---------- open items view ----------
+  function renderOpen() {
+    const items = DATA.events.filter(e => (e.confFlag && e.confFlag.kind === 'pending') ||
+      (e.payPill && (e.payPill.kind === 'pending' || e.payPill.kind === 'unpaid')));
+    const byCat = {};
+    items.forEach(e => { (byCat[e.category] = byCat[e.category] || []).push(e); });
+    let html = `<h2 class="display" style="margin-top:0;">Open items</h2><p style="color:var(--muted); margin-top:-6px;">Everything still missing a confirmation number or payment, grouped by type.</p>`;
+    Object.keys(byCat).forEach(cat => {
+      html += `<div class="oi-group"><h3>${cat}</h3>`;
+      byCat[cat].forEach(ev => {
+        html += `<div class="oi-item">
+          <div class="oi-title">${escapeHtml(ev.title)}</div>
+          <div class="oi-who">${fmtWho(ev.who).join(', ')}</div>
+          <div class="oi-notes">${escapeHtml(ev.notes || '')}</div>
+          ${lastEditedHtml(ev)}
+          <button class="edit-btn" data-edit="${ev.id}">&#9998; Add details</button>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    html += `<div class="oi-group"><h3>Flagged for awareness</h3>
+      <div class="oi-flag">JR's Monday-night golf-trip lodging is his own arrangement, separate from the group's Tarrytown House Estate booking &mdash; not tracked here.</div>
+      <div class="oi-flag">JR's Tuesday-night Manhattan lodging (traveling with his father) is his own arrangement and isn't tracked here.</div>
+      <div class="oi-flag">JR's Wednesday-night hotel after Metropolis is TBD and his own arrangement &mdash; he does not fly home Thursday with the group.</div>
+      <div class="oi-flag">Cole &amp; Neely's two Martinique rooms (confirmations 3521495361 and 3515627522) still only list Danny Loe as the named guest on the Hilton record &mdash; add their names at check-in.</div>
+    </div>`;
+    viewOpen.innerHTML = html;
+    viewOpen.querySelectorAll('[data-edit]').forEach(el => {
+      el.addEventListener('click', () => openEditModal(Number(el.getAttribute('data-edit'))));
+    });
+  }
+
+  function showMaster() {
+    viewMaster.classList.add('active'); viewPerson.classList.remove('active'); viewOpen.classList.remove('active');
+    setActive();
+    document.querySelector('.master-btn').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  function showPerson(code) {
+    renderPerson(code);
+    viewPerson.classList.add('active'); viewMaster.classList.remove('active'); viewOpen.classList.remove('active');
+    setActive();
+    tabs.querySelectorAll('.person-btn').forEach(b => { if (b.textContent === personFirst(code)) b.classList.add('active'); });
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  function showOpen() {
+    renderOpen();
+    viewOpen.classList.add('active'); viewMaster.classList.remove('active'); viewPerson.classList.remove('active');
+    setActive();
+    document.querySelector('.open-btn').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  const viewLog = document.getElementById('view-log');
+  function showLog() {
+    renderLog();
+    viewLog.classList.add('active'); viewMaster.classList.remove('active'); viewPerson.classList.remove('active'); viewOpen.classList.remove('active');
+    setActive();
+    document.querySelector('.log-btn').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  // ---------- shared storage: group edits ----------
+  const STORAGE_KEY = 'overrides';
+  let overrides = {};       // { eventId: {time, location, room, conf, payStatus, notes, lastEdited} }
+  let currentView = 'master';
+  let currentPersonCode = null;
+  const syncNote = document.getElementById('sync-note');
+
+  async function loadOverrides() {
+    try {
+      const res = await fetch('/api/overrides');
+      overrides = res.ok ? await res.json() : {};
+    } catch (err) {
+      overrides = {};
+    }
+  }
+
+  function payKindToLabel(kind) {
+    return { paid: 'Paid', unpaid: 'Unpaid', pending: 'Pending', hidden: 'Hidden' }[kind] || '';
+  }
+
+  function applyOverrides() {
+    DATA.events.forEach(ev => {
+      const o = overrides[ev.id];
+      if (!o) return;
+      if (o.time) ev.time = o.time;
+      if (o.location) ev.location = o.location;
+      if (o.room) ev.room = o.room;
+      if (o.conf) { ev.conf = o.conf; ev.confFlag = null; }
+      if (o.notes) ev.notes = o.notes;
+      if (o.payStatus) {
+        ev.payPill = { label: payKindToLabel(o.payStatus), kind: o.payStatus };
+      }
+      if (o.lastEdited) ev.lastEdited = o.lastEdited;
+    });
+  }
+
+  function recomputeBadgeAndNote() {
+    const count = DATA.events.filter(e => (e.confFlag && e.confFlag.kind === 'pending') ||
+      (e.payPill && (e.payPill.kind === 'pending' || e.payPill.kind === 'unpaid'))).length;
+    updateOpenBadge(count);
+    const n = Object.keys(overrides).length;
+    syncNote.textContent = n
+      ? `Synced with the group \u2014 ${n} item${n === 1 ? '' : 's'} updated by the group so far.`
+      : 'Synced with the group \u2014 no updates yet. Tap "Edit" on any item to add details.';
+    const newCount = Object.values(overrides).filter(o => o.lastEdited && o.lastEdited.at &&
+      (!lastExportAt || o.lastEdited.at > lastExportAt)).length;
+    updateLogBadge(newCount);
+  }
+
+  function reRenderCurrentView() {
+    if (currentView === 'master') { renderMaster(); }
+    else if (currentView === 'person') { renderPerson(currentPersonCode); }
+    else if (currentView === 'open') { renderOpen(); }
+    else if (currentView === 'log') { renderLog(); }
+    recomputeBadgeAndNote();
+  }
+
+  // wrap show* to track current view
+  const _showMaster = showMaster, _showPerson = showPerson, _showOpen = showOpen, _showLog = showLog;
+  showMaster = function () { currentView = 'master'; _showMaster(); };
+  showPerson = function (code) { currentView = 'person'; currentPersonCode = code; _showPerson(code); };
+  showOpen = function () { currentView = 'open'; _showOpen(); };
+  showLog = function () { currentView = 'log'; _showLog(); };
+
+  // ---------- edit modal ----------
+  const overlay = document.getElementById('modal-overlay');
+  const mTitle = document.getElementById('modal-title');
+  const mSub = document.getElementById('modal-sub');
+  const mTime = document.getElementById('f-time');
+  const mLoc = document.getElementById('f-location');
+  const mRoom = document.getElementById('f-room');
+  const mConf = document.getElementById('f-conf');
+  const mPay = document.getElementById('f-pay');
+  const mNotes = document.getElementById('f-notes');
+  const mName = document.getElementById('f-name');
+  const mSave = document.getElementById('modal-save');
+  const mCancel = document.getElementById('modal-cancel');
+  const mStatus = document.getElementById('modal-status');
+  let editingId = null;
+
+  function openEditModal(id) {
+    const ev = DATA.events.find(e => e.id === id);
+    if (!ev) return;
+    editingId = id;
+    mTitle.textContent = ev.title;
+    mSub.textContent = fmtWho(ev.who).join(', ');
+    mTime.value = ev.time === 'TBD' ? '' : (ev.time || '');
+    mLoc.value = ev.location || '';
+    mRoom.value = ev.room || '';
+    mConf.value = ev.conf || '';
+    mPay.value = ev.payPill ? ev.payPill.kind : '';
+    mNotes.value = ev.notes || '';
+    mName.value = (ev.lastEdited && ev.lastEdited.by) || '';
+    mStatus.textContent = '';
+    mSave.disabled = false;
+    mSave.textContent = 'Save update';
+    overlay.classList.add('open');
+  }
+
+  function closeModal() {
+    overlay.classList.remove('open');
+    editingId = null;
+  }
+
+  mCancel.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+  mSave.addEventListener('click', async () => {
+    if (editingId == null) return;
+    const patch = {
+      time: mTime.value.trim(),
+      location: mLoc.value.trim(),
+      room: mRoom.value.trim(),
+      conf: mConf.value.trim(),
+      payStatus: mPay.value,
+      notes: mNotes.value.trim(),
+      lastEdited: { by: mName.value.trim() || 'a group member', at: new Date().toISOString() }
+    };
+    mSave.disabled = true;
+    mSave.textContent = 'Saving\u2026';
+    mStatus.textContent = '';
+    try {
+      const merged = Object.assign({}, overrides[editingId] || {}, patch);
+      const res = await fetch('/api/overrides/' + editingId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(merged)
+      });
+      if (!res.ok) throw new Error('Save failed');
+      overrides[editingId] = await res.json();
+      applyOverrides();
+      closeModal();
+      reRenderCurrentView();
+    } catch (err) {
+      mSave.disabled = false;
+      mSave.textContent = 'Save update';
+      mStatus.textContent = "Couldn't save \u2014 check your connection and try again.";
+    }
+  });
+
+  // ---------- update log ----------
+  const LOG_EXPORT_KEY = 'log-last-export';
+  let lastExportAt = null; // ISO string or null
+
+  async function loadLastExportAt() {
+    try {
+      const res = await fetch('/api/meta/log-last-export');
+      const result = res.ok ? await res.json() : null;
+      lastExportAt = result && result.value ? result.value : null;
+    } catch (err) {
+      lastExportAt = null;
+    }
+  }
+
+  function fieldLine(label, val) {
+    return val ? `${label}: ${val}` : '';
+  }
+
+  function entryFieldsText(o) {
+    const parts = [
+      fieldLine('Time', o.time),
+      fieldLine('Location/details', o.location),
+      fieldLine('Room/vehicle', o.room),
+      fieldLine('Confirmation #', o.conf),
+      fieldLine('Payment status', o.payStatus ? payKindToLabel(o.payStatus) : ''),
+      fieldLine('Notes', o.notes),
+    ].filter(Boolean);
+    return parts.join('; ');
+  }
+
+  function getLogEntries() {
+    return Object.keys(overrides).map(id => {
+      const ev = DATA.events.find(e => e.id === Number(id));
+      const o = overrides[id];
+      return {
+        id: Number(id),
+        title: ev ? ev.title : `Event #${id}`,
+        who: ev ? fmtWho(ev.who).join(', ') : '',
+        fieldsText: entryFieldsText(o),
+        by: (o.lastEdited && o.lastEdited.by) || 'a group member',
+        at: (o.lastEdited && o.lastEdited.at) || null,
+      };
+    }).sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+  }
+
+  function fmtWhen(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    } catch (e) { return iso; }
+  }
+
+  function entriesToText(entries) {
+    if (!entries.length) return 'No updates to report.';
+    const lines = ['Loe Group Trip \u2014 update log', ''];
+    entries.forEach(e => {
+      lines.push(`\u2022 ${e.title} (${e.who})`);
+      if (e.fieldsText) lines.push(`  ${e.fieldsText}`);
+      lines.push(`  \u2014 updated by ${e.by}${e.at ? ' on ' + fmtWhen(e.at) : ''}`);
+      lines.push('');
+    });
+    return lines.join('\n').trim();
+  }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function renderLog() {
+    const allEntries = getLogEntries();
+    const newEntries = lastExportAt ? allEntries.filter(e => e.at && e.at > lastExportAt) : allEntries;
+
+    let html = `<h2 class="display" style="margin-top:0;">Update log</h2>
+      <p style="color:var(--muted); margin-top:-6px;">Every detail the group has added, newest first. Copy and paste this back to Claude to fold into the master data.</p>
+      <div class="log-actions">
+        <button class="log-btn-action" id="log-copy-new">Copy new updates (${newEntries.length})</button>
+        <button class="log-btn-action secondary" id="log-copy-all">Copy all updates (${allEntries.length})</button>
+      </div>
+      <p class="log-status" id="log-status">${lastExportAt ? 'Last copied ' + fmtWhen(lastExportAt) + '.' : 'Nothing copied back to Claude yet.'}</p>
+      <textarea class="log-textarea" id="log-text" readonly>${escapeHtml(entriesToText(newEntries))}</textarea>`;
+
+    if (!allEntries.length) {
+      html += `<p class="log-empty">No edits yet \u2014 once someone taps Edit on an item, it'll show up here.</p>`;
+    } else {
+      allEntries.forEach(e => {
+        html += `<div class="log-entry">
+          <div class="log-when">${fmtWhen(e.at)}${lastExportAt && e.at && e.at <= lastExportAt ? ' \u00b7 already copied' : ''}</div>
+          <div class="log-title">${escapeHtml(e.title)} <span style="font-weight:400;color:var(--muted);">(${escapeHtml(e.who)})</span></div>
+          <div class="log-fields">${escapeHtml(e.fieldsText || 'No fields filled in yet.')}</div>
+          <div class="last-edited">Updated by ${escapeHtml(e.by)}</div>
+        </div>`;
+      });
+    }
+
+    viewLog.innerHTML = html;
+
+    const logText = document.getElementById('log-text');
+    const logStatus = document.getElementById('log-status');
+
+    document.getElementById('log-copy-new').addEventListener('click', async () => {
+      const text = entriesToText(newEntries);
+      logText.value = text;
+      logText.select();
+      const ok = await copyText(text);
+      logStatus.textContent = ok
+        ? 'Copied to your clipboard \u2014 paste it back to Claude.'
+        : 'Selected below \u2014 press Ctrl/Cmd+C to copy, then paste it back to Claude.';
+      if (newEntries.length) {
+        const now = new Date().toISOString();
+        try {
+          await fetch('/api/meta/log-last-export', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value: now })
+          });
+          lastExportAt = now;
+        } catch (err) { /* non-fatal */ }
+      }
+      recomputeBadgeAndNote();
+    });
+
+    document.getElementById('log-copy-all').addEventListener('click', async () => {
+      const text = entriesToText(allEntries);
+      logText.value = text;
+      logText.select();
+      const ok = await copyText(text);
+      logStatus.textContent = ok
+        ? 'Copied everything to your clipboard \u2014 paste it back to Claude.'
+        : 'Selected below \u2014 press Ctrl/Cmd+C to copy, then paste it back to Claude.';
+    });
+  }
+
+  // ---------- init ----------
+  (async function init() {
+    syncNote.textContent = 'Loading shared updates\u2026';
+    await loadOverrides();
+    await loadLastExportAt();
+    applyOverrides();
+    renderMaster();
+    showMaster();
+    recomputeBadgeAndNote();
+  })();
+})();
+</script>
