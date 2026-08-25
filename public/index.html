@@ -439,6 +439,32 @@
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
+  // Converts an event's time string into a sortable minutes-since-midnight
+  // value so the day view stays chronological even after edits. Handles
+  // plain times ("6:30 PM"), dual tee times ("1:20 & 1:30 PM" \u2014 sorts by
+  // the earlier one), prefixed times ("Check-in 3:00 PM"), and the
+  // non-time labels used elsewhere in the data ("Night", "TBD", "AM",
+  // multi-night stay spans like "4 nights").
+  function parseTimeForSort(t) {
+    if (!t) return 24 * 60 + 2;
+    const s = String(t).trim();
+    if (/^night$/i.test(s)) return 23 * 60;
+    if (/^tbd$/i.test(s)) return 24 * 60 + 1;
+    if (/^am$/i.test(s)) return 8 * 60;
+    if (/^\d+\s*nights?$/i.test(s)) return -1;
+    const m = s.match(/(\d{1,2}):(\d{2})(?:\s*&\s*\d{1,2}:\d{2})?\s*(AM|PM)/i);
+    if (m) {
+      let h = parseInt(m[1], 10) % 12;
+      if (/pm/i.test(m[3])) h += 12;
+      return h * 60 + parseInt(m[2], 10);
+    }
+    return 24 * 60; // unrecognized text \u2014 near the end, before TBD
+  }
+
+  function sortByTime(list) {
+    return list.slice().sort((a, b) => parseTimeForSort(a.time) - parseTimeForSort(b.time));
+  }
+
   function lastEditedHtml(ev) {
     if (!ev.lastEdited) return '';
     const by = ev.lastEdited.by ? escapeHtml(ev.lastEdited.by) : 'someone';
@@ -471,7 +497,7 @@
   function renderMaster() {
     let html = '';
     DATA.days.forEach(day => {
-      const evs = DATA.events.filter(e => e.dates.includes(day.date));
+      const evs = sortByTime(DATA.events.filter(e => e.dates.includes(day.date)));
       if (!evs.length) return;
       html += `<div class="day-block"><div class="day-heading"><span class="weekday">${day.weekday}</span><span class="datestr mono">${day.label}, 2026</span></div>`;
       evs.forEach(ev => { html += eventCardHtml(ev); });
@@ -494,7 +520,7 @@
       <h2>${person.name}</h2><div class="household">${person.household ? person.household + ' household' : ''}</div></div>`;
 
     DATA.days.forEach(day => {
-      const dayEvs = evs.filter(e => e.dates.includes(day.date));
+      const dayEvs = sortByTime(evs.filter(e => e.dates.includes(day.date)));
       if (!dayEvs.length) return;
       html += `<div class="p-day">${day.weekday}<span class="datestr mono">${day.label}, 2026</span></div>`;
       dayEvs.forEach(ev => {
