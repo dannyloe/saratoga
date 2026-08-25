@@ -228,6 +228,35 @@
   .modal-cancel { background: none; border: none; color: var(--muted); font-size: 0.85rem; text-decoration: underline; }
   .modal-status { font-size: 0.8rem; color: var(--muted); margin-top: 10px; min-height: 1.2em; }
 
+  .who-edit-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .who-edit-chip {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--paper);
+    border: 1px solid var(--line); border-radius: 999px; padding: 3px 6px 3px 12px; font-size: 0.82rem;
+  }
+  .who-edit-chip button {
+    background: none; border: none; color: var(--muted); font-size: 1rem; line-height: 1;
+    width: 18px; height: 18px; border-radius: 50%; cursor: pointer;
+  }
+  .who-edit-chip button:hover { background: var(--line); color: var(--ink-text); }
+  .who-add-row { display: flex; gap: 6px; }
+  .who-add-row input { flex: 1; }
+  .who-add-row button {
+    border: 1px solid var(--line); background: var(--paper); color: var(--ink-text);
+    border-radius: 6px; padding: 6px 14px; font-size: 0.85rem; font-weight: 600;
+  }
+  .who-add-row button:hover { border-color: var(--brass); color: var(--brass-strong); }
+
+  .modal-dates-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .modal-date-check { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; }
+  .modal-date-check input { width: auto; }
+
+  .add-event-btn {
+    display: inline-flex; align-items: center; gap: 4px; border: 1px dashed var(--brass);
+    background: none; color: var(--brass-strong); border-radius: 999px; padding: 8px 16px;
+    font-weight: 600; font-size: 0.85rem; margin: 4px 0 18px;
+  }
+  .add-event-btn:hover { background: var(--brass); color: var(--paper-raised); border-style: solid; }
+
   .sync-note {
     display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.78rem;
     padding: 6px 20px 0; max-width: 920px; margin: 0 auto;
@@ -291,6 +320,34 @@
   <div class="modal-box">
     <h3 id="modal-title">Edit item</h3>
     <p class="modal-sub" id="modal-sub"></p>
+    <div class="modal-field" id="f-title-field" style="display:none;">
+      <label for="f-title">Event title</label>
+      <input type="text" id="f-title" placeholder="e.g. Dinner reservation">
+    </div>
+    <div class="modal-field" id="f-category-field" style="display:none;">
+      <label for="f-category">Category</label>
+      <select id="f-category">
+        <option>Flight</option>
+        <option>Drive</option>
+        <option>Stay</option>
+        <option>Golf</option>
+        <option>Dine</option>
+        <option>Show</option>
+        <option>Personal</option>
+      </select>
+    </div>
+    <div class="modal-field" id="f-dates-field" style="display:none;">
+      <label>Date(s)</label>
+      <div id="f-dates-checks" class="modal-dates-grid"></div>
+    </div>
+    <div class="modal-field">
+      <label>Who's attending</label>
+      <div id="f-who-chips" class="who-edit-chips"></div>
+      <div class="who-add-row">
+        <input type="text" id="f-who-add" placeholder="Type a name and press Add">
+        <button type="button" id="f-who-add-btn">Add</button>
+      </div>
+    </div>
     <div class="modal-field">
       <label for="f-time">Time</label>
       <input type="text" id="f-time" placeholder="e.g. 9:40 AM or TBD">
@@ -495,7 +552,7 @@
   }
 
   function renderMaster() {
-    let html = '';
+    let html = `<button class="add-event-btn" id="add-event-btn">+ Add a new event</button>`;
     DATA.days.forEach(day => {
       const evs = sortByTime(DATA.events.filter(e => e.dates.includes(day.date)));
       if (!evs.length) return;
@@ -510,6 +567,7 @@
     viewMaster.querySelectorAll('[data-edit]').forEach(el => {
       el.addEventListener('click', () => openEditModal(Number(el.getAttribute('data-edit'))));
     });
+    document.getElementById('add-event-btn').addEventListener('click', openNewEventModal);
   }
 
   // ---------- person view ----------
@@ -558,9 +616,11 @@
     Object.keys(byCat).forEach(cat => {
       html += `<div class="oi-group"><h3>${cat}</h3>`;
       byCat[cat].forEach(ev => {
+        const whyPills = `${statusPillHtml(ev.payPill)}${ev.confFlag ? `<span class="status-pill ${ev.confFlag.kind}">${escapeHtml(ev.confFlag.label)}</span>` : ''}`;
         html += `<div class="oi-item">
           <div class="oi-title">${escapeHtml(ev.title)}</div>
           <div class="oi-who">${fmtWho(ev.who).join(', ')}</div>
+          <div class="event-meta" style="margin: 4px 0;">${whyPills}</div>
           <div class="oi-notes">${escapeHtml(ev.notes || '')}</div>
           ${lastEditedHtml(ev)}
           <button class="edit-btn" data-edit="${ev.id}">&#9998; Add details</button>
@@ -611,7 +671,9 @@
 
   // ---------- shared storage: group edits ----------
   const STORAGE_KEY = 'overrides';
-  let overrides = {};       // { eventId: {time, location, room, conf, payStatus, notes, lastEdited} }
+  const NEW_EVENTS_KEY = 'new-events';
+  let overrides = {};       // { eventId: {time, location, room, conf, payStatus, notes, who, lastEdited} }
+  let newEvents = [];       // [ full event objects added by the group ]
   let currentView = 'master';
   let currentPersonCode = null;
   const syncNote = document.getElementById('sync-note');
@@ -625,11 +687,32 @@
     }
   }
 
+  async function loadNewEvents() {
+    try {
+      const res = await fetch('/api/new-events');
+      newEvents = res.ok ? await res.json() : [];
+    } catch (err) {
+      newEvents = [];
+    }
+  }
+
+  async function saveNewEvents(latest) {
+    await fetch('/api/new-events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(latest)
+    });
+  }
+
   function payKindToLabel(kind) {
     return { paid: 'Paid', unpaid: 'Unpaid', pending: 'Pending', hidden: 'Hidden' }[kind] || '';
   }
 
   function applyOverrides() {
+    // Merge in any brand-new events the group has added, once.
+    newEvents.forEach(ne => {
+      if (!DATA.events.some(e => e.id === ne.id)) DATA.events.push(ne);
+    });
     DATA.events.forEach(ev => {
       const o = overrides[ev.id];
       if (!o) return;
@@ -638,6 +721,7 @@
       if (o.room) ev.room = o.room;
       if (o.conf) { ev.conf = o.conf; ev.confFlag = null; }
       if (o.notes) ev.notes = o.notes;
+      if (o.who) ev.who = o.who;
       if (o.payStatus) {
         ev.payPill = { label: payKindToLabel(o.payStatus), kind: o.payStatus };
       }
@@ -649,9 +733,9 @@
     const count = DATA.events.filter(e => (e.confFlag && e.confFlag.kind === 'pending') ||
       (e.payPill && (e.payPill.kind === 'pending' || e.payPill.kind === 'unpaid'))).length;
     updateOpenBadge(count);
-    const n = Object.keys(overrides).length;
+    const n = Object.keys(overrides).length + newEvents.length;
     syncNote.textContent = n
-      ? `Synced with the group \u2014 ${n} item${n === 1 ? '' : 's'} updated by the group so far.`
+      ? `Synced with the group \u2014 ${n} update${n === 1 ? '' : 's'} made by the group so far.`
       : 'Synced with the group \u2014 no updates yet. Tap "Edit" on any item to add details.';
     const newCount = Object.values(overrides).filter(o => o.lastEdited && o.lastEdited.at &&
       (!lastExportAt || o.lastEdited.at > lastExportAt)).length;
@@ -677,6 +761,15 @@
   const overlay = document.getElementById('modal-overlay');
   const mTitle = document.getElementById('modal-title');
   const mSub = document.getElementById('modal-sub');
+  const mTitleField = document.getElementById('f-title-field');
+  const mTitleInput = document.getElementById('f-title');
+  const mCategoryField = document.getElementById('f-category-field');
+  const mCategoryInput = document.getElementById('f-category');
+  const mDatesField = document.getElementById('f-dates-field');
+  const mDatesChecks = document.getElementById('f-dates-checks');
+  const mWhoChips = document.getElementById('f-who-chips');
+  const mWhoAdd = document.getElementById('f-who-add');
+  const mWhoAddBtn = document.getElementById('f-who-add-btn');
   const mTime = document.getElementById('f-time');
   const mLoc = document.getElementById('f-location');
   const mRoom = document.getElementById('f-room');
@@ -688,13 +781,48 @@
   const mCancel = document.getElementById('modal-cancel');
   const mStatus = document.getElementById('modal-status');
   let editingId = null;
+  let isNewEvent = false;
+  let currentWhoList = [];
+
+  function renderWhoChips() {
+    mWhoChips.innerHTML = currentWhoList.map((code, i) => {
+      const label = escapeHtml(fmtWho([code])[0]);
+      return `<span class="who-edit-chip">${label}<button type="button" data-remove-who="${i}">&times;</button></span>`;
+    }).join('') || '<span style="color:var(--muted); font-size:0.82rem;">Nobody added yet</span>';
+    mWhoChips.querySelectorAll('[data-remove-who]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentWhoList.splice(Number(btn.getAttribute('data-remove-who')), 1);
+        renderWhoChips();
+      });
+    });
+  }
+
+  function addWhoFromInput() {
+    const name = mWhoAdd.value.trim();
+    if (!name) return;
+    // Match an existing traveler by code or first name so their full name displays correctly.
+    const match = DATA.people.find(p => p.code.toLowerCase() === name.toLowerCase() ||
+      p.name.split(' ')[0].toLowerCase() === name.toLowerCase());
+    const code = match ? match.code : name;
+    if (!currentWhoList.includes(code)) currentWhoList.push(code);
+    mWhoAdd.value = '';
+    renderWhoChips();
+  }
+  mWhoAddBtn.addEventListener('click', addWhoFromInput);
+  mWhoAdd.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addWhoFromInput(); } });
 
   function openEditModal(id) {
     const ev = DATA.events.find(e => e.id === id);
     if (!ev) return;
     editingId = id;
+    isNewEvent = false;
+    mTitleField.style.display = 'none';
+    mCategoryField.style.display = 'none';
+    mDatesField.style.display = 'none';
     mTitle.textContent = ev.title;
     mSub.textContent = fmtWho(ev.who).join(', ');
+    currentWhoList = ev.who.slice();
+    renderWhoChips();
     mTime.value = ev.time === 'TBD' ? '' : (ev.time || '');
     mLoc.value = ev.location || '';
     mRoom.value = ev.room || '';
@@ -708,16 +836,92 @@
     overlay.classList.add('open');
   }
 
+  function openNewEventModal() {
+    editingId = null;
+    isNewEvent = true;
+    mTitleField.style.display = '';
+    mCategoryField.style.display = '';
+    mDatesField.style.display = '';
+    mTitle.textContent = 'Add a new event';
+    mSub.textContent = 'Anyone with this link can add and edit events.';
+    mTitleInput.value = '';
+    mCategoryInput.value = 'Dine';
+    mDatesChecks.innerHTML = DATA.days.map(d =>
+      `<label class="modal-date-check"><input type="checkbox" value="${d.date}"> ${d.weekday} ${d.label}</label>`
+    ).join('');
+    currentWhoList = [];
+    renderWhoChips();
+    mTime.value = '';
+    mLoc.value = '';
+    mRoom.value = '';
+    mConf.value = '';
+    mPay.value = '';
+    mNotes.value = '';
+    mName.value = '';
+    mStatus.textContent = '';
+    mSave.disabled = false;
+    mSave.textContent = 'Add event';
+    overlay.classList.add('open');
+  }
+
   function closeModal() {
     overlay.classList.remove('open');
     editingId = null;
+    isNewEvent = false;
   }
 
   mCancel.addEventListener('click', closeModal);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
 
   mSave.addEventListener('click', async () => {
-    if (editingId == null) return;
+    if (editingId == null && !isNewEvent) return;
+    const editorName = mName.value.trim() || 'a group member';
+    mSave.disabled = true;
+    mStatus.textContent = '';
+
+    if (isNewEvent) {
+      const selectedDates = Array.from(mDatesChecks.querySelectorAll('input:checked')).map(el => el.value);
+      const title = mTitleInput.value.trim();
+      if (!title || !selectedDates.length) {
+        mSave.disabled = false;
+        mStatus.textContent = 'Please add a title and pick at least one date.';
+        return;
+      }
+      mSave.textContent = 'Adding\u2026';
+      const conf = mConf.value.trim();
+      const newEv = {
+        id: Date.now(),
+        dates: selectedDates,
+        time: mTime.value.trim() || 'TBD',
+        category: mCategoryInput.value,
+        title: title,
+        location: mLoc.value.trim(),
+        room: mRoom.value.trim() || null,
+        who: currentWhoList.slice(),
+        whoNames: currentWhoList.slice(),
+        conf: conf || null,
+        confFlag: conf ? null : { label: 'Needs confirmation #', kind: 'pending' },
+        prepaid: null,
+        payStatus: mPay.value ? payKindToLabel(mPay.value) : null,
+        payPill: mPay.value ? { label: payKindToLabel(mPay.value), kind: mPay.value } : null,
+        notes: mNotes.value.trim(),
+        lastEdited: { by: editorName, at: new Date().toISOString() }
+      };
+      try {
+        newEvents.push(newEv);
+        await saveNewEvents(newEvents);
+        applyOverrides();
+        closeModal();
+        reRenderCurrentView();
+      } catch (err) {
+        newEvents.pop();
+        mSave.disabled = false;
+        mSave.textContent = 'Add event';
+        mStatus.textContent = "Couldn't save \u2014 check your connection and try again.";
+      }
+      return;
+    }
+
     const patch = {
       time: mTime.value.trim(),
       location: mLoc.value.trim(),
@@ -725,11 +929,10 @@
       conf: mConf.value.trim(),
       payStatus: mPay.value,
       notes: mNotes.value.trim(),
-      lastEdited: { by: mName.value.trim() || 'a group member', at: new Date().toISOString() }
+      who: currentWhoList.slice(),
+      lastEdited: { by: editorName, at: new Date().toISOString() }
     };
-    mSave.disabled = true;
     mSave.textContent = 'Saving\u2026';
-    mStatus.textContent = '';
     try {
       const merged = Object.assign({}, overrides[editingId] || {}, patch);
       const res = await fetch('/api/overrides/' + editingId, {
@@ -780,7 +983,7 @@
   }
 
   function getLogEntries() {
-    return Object.keys(overrides).map(id => {
+    const fromOverrides = Object.keys(overrides).map(id => {
       const ev = DATA.events.find(e => e.id === Number(id));
       const o = overrides[id];
       return {
@@ -791,7 +994,16 @@
         by: (o.lastEdited && o.lastEdited.by) || 'a group member',
         at: (o.lastEdited && o.lastEdited.at) || null,
       };
-    }).sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+    });
+    const fromNewEvents = newEvents.map(ne => ({
+      id: ne.id,
+      title: ne.title + ' (new event)',
+      who: fmtWho(ne.who).join(', '),
+      fieldsText: entryFieldsText({ time: ne.time, location: ne.location, room: ne.room, conf: ne.conf, notes: ne.notes }),
+      by: (ne.lastEdited && ne.lastEdited.by) || 'a group member',
+      at: (ne.lastEdited && ne.lastEdited.at) || null,
+    }));
+    return fromOverrides.concat(fromNewEvents).sort((a, b) => (b.at || '').localeCompare(a.at || ''));
   }
 
   function fmtWhen(iso) {
@@ -890,6 +1102,7 @@
   (async function init() {
     syncNote.textContent = 'Loading shared updates\u2026';
     await loadOverrides();
+    await loadNewEvents();
     await loadLastExportAt();
     applyOverrides();
     renderMaster();
