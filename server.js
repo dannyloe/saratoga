@@ -14,7 +14,7 @@ function loadStore() {
   try {
     return JSON.parse(fs.readFileSync(dataPath, 'utf8'));
   } catch (err) {
-    return { overrides: {}, meta: {} };
+    return { overrides: {}, meta: {}, newEvents: [] };
   }
 }
 
@@ -26,7 +26,7 @@ function saveStore(store) {
 }
 
 if (!fs.existsSync(dataPath)) {
-  saveStore({ overrides: {}, meta: {} });
+  saveStore({ overrides: {}, meta: {}, newEvents: [] });
 }
 
 const app = express();
@@ -45,6 +45,19 @@ app.put('/api/overrides/:id', (req, res) => {
   store.overrides[req.params.id] = req.body;
   saveStore(store);
   res.json(req.body);
+});
+
+// ---- new-events: brand-new events the group has added ----
+app.get('/api/new-events', (req, res) => {
+  const store = loadStore();
+  res.json(store.newEvents || []);
+});
+
+app.post('/api/new-events', (req, res) => {
+  const store = loadStore();
+  store.newEvents = Array.isArray(req.body) ? req.body : [];
+  saveStore(store);
+  res.json(store.newEvents);
 });
 
 // ---- meta: small key/value store (e.g. "log-last-export" timestamp) ----
