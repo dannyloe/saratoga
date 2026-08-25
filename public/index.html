@@ -285,6 +285,41 @@
   .log-entry .log-fields { color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
   .log-empty { color: var(--muted); font-size: 0.9rem; padding: 20px 0; }
 
+  /* ---- ask claude ---- */
+  .ask-textarea {
+    width: 100%; min-height: 90px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--paper-raised); color: var(--ink-text); font-family: inherit;
+    font-size: 0.92rem; padding: 12px; margin-bottom: 10px; resize: vertical;
+  }
+  .ask-row { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+  .ask-name-input {
+    border: 1px solid var(--line); background: var(--paper-raised); color: var(--ink-text);
+    border-radius: 6px; padding: 7px 10px; font-size: 0.85rem; width: 180px;
+  }
+  .ask-send-btn {
+    background: var(--brass-strong); color: var(--paper-raised); border: none;
+    border-radius: 999px; padding: 9px 20px; font-weight: 600; font-size: 0.88rem;
+  }
+  .ask-send-btn:hover { background: var(--brass); }
+  .ask-send-btn:disabled { opacity: 0.6; }
+  .ask-status { color: var(--muted); font-size: 0.85rem; margin: 6px 0 18px; min-height: 1.2em; }
+  .ask-proposal {
+    border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; background: var(--paper-raised);
+    margin-bottom: 20px;
+  }
+  .ask-proposal h4 { margin: 0 0 10px; font-family: "Fraunces", Georgia, serif; }
+  .ask-change-item {
+    border-left: 3px solid var(--brass); padding: 6px 0 6px 12px; margin-bottom: 8px; font-size: 0.88rem;
+  }
+  .ask-proposal-actions { display: flex; gap: 10px; margin-top: 12px; }
+  .ask-confirm-btn {
+    background: var(--brass-strong); color: var(--paper-raised); border: none;
+    border-radius: 999px; padding: 8px 18px; font-weight: 600; font-size: 0.85rem;
+  }
+  .ask-confirm-btn:hover { background: var(--brass); }
+  .ask-cancel-btn { background: none; border: none; color: var(--muted); font-size: 0.85rem; text-decoration: underline; }
+  .ask-examples { color: var(--muted); font-size: 0.8rem; margin-bottom: 20px; line-height: 1.6; }
+
   @media (max-width: 560px) {
     .event-card { grid-template-columns: 1fr; }
     .event-time { padding-top: 0; }
@@ -310,6 +345,7 @@
   <section class="view" id="view-person"></section>
   <section class="view" id="view-open"></section>
   <section class="view" id="view-log"></section>
+  <section class="view" id="view-ask"></section>
 </main>
 
 <p class="sync-note" id="sync-note">Loading shared updates&hellip;</p>
@@ -463,6 +499,8 @@
   tabs.appendChild(openBtn);
   const logBtn = pill('Update Log', () => showLog(), 'log-btn', null);
   tabs.appendChild(logBtn);
+  const askBtn = pill('Tell Claude', () => showAsk(), 'ask-btn', null);
+  tabs.appendChild(askBtn);
 
   function updateLogBadge(count) {
     let sp = logBtn.querySelector('.badge');
@@ -640,32 +678,50 @@
     });
   }
 
+  const viewLog = document.getElementById('view-log');
+  const viewAsk = document.getElementById('view-ask');
+
+  function hideAllViews() {
+    [viewMaster, viewPerson, viewOpen, viewLog, viewAsk].forEach(v => v.classList.remove('active'));
+  }
+
   function showMaster() {
-    viewMaster.classList.add('active'); viewPerson.classList.remove('active'); viewOpen.classList.remove('active');
+    hideAllViews();
+    viewMaster.classList.add('active');
     setActive();
     document.querySelector('.master-btn').classList.add('active');
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   function showPerson(code) {
     renderPerson(code);
-    viewPerson.classList.add('active'); viewMaster.classList.remove('active'); viewOpen.classList.remove('active');
+    hideAllViews();
+    viewPerson.classList.add('active');
     setActive();
     tabs.querySelectorAll('.person-btn').forEach(b => { if (b.textContent === personFirst(code)) b.classList.add('active'); });
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   function showOpen() {
     renderOpen();
-    viewOpen.classList.add('active'); viewMaster.classList.remove('active'); viewPerson.classList.remove('active');
+    hideAllViews();
+    viewOpen.classList.add('active');
     setActive();
     document.querySelector('.open-btn').classList.add('active');
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
-  const viewLog = document.getElementById('view-log');
   function showLog() {
     renderLog();
-    viewLog.classList.add('active'); viewMaster.classList.remove('active'); viewPerson.classList.remove('active'); viewOpen.classList.remove('active');
+    hideAllViews();
+    viewLog.classList.add('active');
     setActive();
     document.querySelector('.log-btn').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  function showAsk() {
+    renderAsk();
+    hideAllViews();
+    viewAsk.classList.add('active');
+    setActive();
+    document.querySelector('.ask-btn').classList.add('active');
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
@@ -747,15 +803,17 @@
     else if (currentView === 'person') { renderPerson(currentPersonCode); }
     else if (currentView === 'open') { renderOpen(); }
     else if (currentView === 'log') { renderLog(); }
+    // 'ask' is intentionally not auto-re-rendered here; applyProposal() handles its own UI update.
     recomputeBadgeAndNote();
   }
 
   // wrap show* to track current view
-  const _showMaster = showMaster, _showPerson = showPerson, _showOpen = showOpen, _showLog = showLog;
+  const _showMaster = showMaster, _showPerson = showPerson, _showOpen = showOpen, _showLog = showLog, _showAsk = showAsk;
   showMaster = function () { currentView = 'master'; _showMaster(); };
   showPerson = function (code) { currentView = 'person'; currentPersonCode = code; _showPerson(code); };
   showOpen = function () { currentView = 'open'; _showOpen(); };
   showLog = function () { currentView = 'log'; _showLog(); };
+  showAsk = function () { currentView = 'ask'; _showAsk(); };
 
   // ---------- edit modal ----------
   const overlay = document.getElementById('modal-overlay');
@@ -1095,6 +1153,144 @@
       logStatus.textContent = ok
         ? 'Copied everything to your clipboard \u2014 paste it back to Claude.'
         : 'Selected below \u2014 press Ctrl/Cmd+C to copy, then paste it back to Claude.';
+    });
+  }
+
+  // ---------- ask claude (chat-to-update) ----------
+  let pendingProposal = null;
+
+  function changeItemHtml(change) {
+    if (change.type === 'update') {
+      const ev = DATA.events.find(e => e.id === change.eventId);
+      const fields = entryFieldsText(change.patch || {});
+      return `<div class="ask-change-item"><strong>Update:</strong> ${escapeHtml(ev ? ev.title : 'Event #' + change.eventId)}<br>${escapeHtml(fields || 'No fields specified.')}</div>`;
+    }
+    if (change.type === 'create') {
+      const ev = change.event || {};
+      const fields = entryFieldsText({ time: ev.time, location: ev.location, room: ev.room, conf: ev.conf, notes: ev.notes });
+      return `<div class="ask-change-item"><strong>New event:</strong> ${escapeHtml(ev.title || '(untitled)')} \u2014 ${escapeHtml((ev.dates || []).join(', '))}<br>${escapeHtml(fields || '')}</div>`;
+    }
+    return '';
+  }
+
+  function renderProposal(data, container, editorName) {
+    if (data.needsClarification) {
+      container.innerHTML = `<div class="ask-proposal"><h4>I need a bit more detail</h4><p>${escapeHtml(data.needsClarification)}</p></div>`;
+      return;
+    }
+    if (!data.changes || !data.changes.length) {
+      container.innerHTML = `<div class="ask-proposal"><h4>Nothing to change</h4><p>I couldn't find a specific change to make from that message.</p></div>`;
+      return;
+    }
+    container.innerHTML = `<div class="ask-proposal">
+      <h4>Proposed change${data.changes.length > 1 ? 's' : ''}</h4>
+      <p>${escapeHtml(data.summary || '')}</p>
+      ${data.changes.map(changeItemHtml).join('')}
+      <div class="ask-proposal-actions">
+        <button class="ask-confirm-btn" id="ask-confirm-btn">Apply this</button>
+        <button class="ask-cancel-btn" id="ask-cancel-btn">Cancel</button>
+      </div>
+    </div>`;
+    document.getElementById('ask-cancel-btn').addEventListener('click', () => {
+      pendingProposal = null;
+      container.innerHTML = '';
+    });
+    document.getElementById('ask-confirm-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('ask-confirm-btn');
+      btn.disabled = true;
+      btn.textContent = 'Applying\u2026';
+      try {
+        await applyProposal(data, editorName);
+        container.innerHTML = `<div class="ask-proposal"><h4>Done</h4><p>Applied \u2014 check the itinerary to see the update.</p></div>`;
+        pendingProposal = null;
+        reRenderCurrentView();
+      } catch (err) {
+        container.innerHTML = `<div class="ask-proposal"><h4>Couldn't apply that</h4><p>${escapeHtml(err.message || 'Unknown error')}</p></div>`;
+      }
+    });
+  }
+
+  async function applyProposal(data, editorName) {
+    const lastEdited = { by: editorName || 'a group member', at: new Date().toISOString() };
+    for (const change of (data.changes || [])) {
+      if (change.type === 'update' && change.eventId != null) {
+        const merged = Object.assign({}, overrides[change.eventId] || {}, change.patch || {}, { lastEdited });
+        const res = await fetch('/api/overrides/' + change.eventId, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(merged)
+        });
+        if (!res.ok) throw new Error('Failed to save an update.');
+        overrides[change.eventId] = await res.json();
+      } else if (change.type === 'create' && change.event) {
+        const ev = change.event;
+        const conf = ev.conf || null;
+        const newEv = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          dates: ev.dates || [],
+          time: ev.time || 'TBD',
+          category: ev.category || 'Personal',
+          title: ev.title || 'Untitled event',
+          location: ev.location || '',
+          room: ev.room || null,
+          who: ev.who || [],
+          whoNames: ev.who || [],
+          conf: conf,
+          confFlag: conf ? null : { label: 'Needs confirmation #', kind: 'pending' },
+          prepaid: null,
+          payStatus: ev.payStatus ? payKindToLabel(ev.payStatus) : null,
+          payPill: ev.payStatus ? { label: payKindToLabel(ev.payStatus), kind: ev.payStatus } : null,
+          notes: ev.notes || '',
+          lastEdited
+        };
+        newEvents.push(newEv);
+        await saveNewEvents(newEvents);
+      }
+    }
+    applyOverrides();
+  }
+
+  function renderAsk() {
+    viewAsk.innerHTML = `<h2 class="display" style="margin-top:0;">Tell Claude</h2>
+      <p style="color:var(--muted); margin-top:-6px;">Describe a change in plain English \u2014 Claude will propose the update for you to review before anything is saved.</p>
+      <p class="ask-examples">Examples: "Ed is taking an Uber to LGA and flying home Wednesday night instead of staying with Bo" &middot;
+      "The Strip House confirmation number is 2110086645" &middot; "Add a lunch stop Thursday at noon for the golf group"</p>
+      <textarea class="ask-textarea" id="ask-input" placeholder="What changed?"></textarea>
+      <div class="ask-row">
+        <input type="text" class="ask-name-input" id="ask-name" placeholder="Your name (optional)">
+        <button class="ask-send-btn" id="ask-send-btn">Send to Claude</button>
+      </div>
+      <p class="ask-status" id="ask-status"></p>
+      <div id="ask-proposal-container"></div>`;
+
+    const askInput = document.getElementById('ask-input');
+    const askName = document.getElementById('ask-name');
+    const askSendBtn = document.getElementById('ask-send-btn');
+    const askStatus = document.getElementById('ask-status');
+    const askProposalContainer = document.getElementById('ask-proposal-container');
+
+    askSendBtn.addEventListener('click', async () => {
+      const message = askInput.value.trim();
+      if (!message) return;
+      askSendBtn.disabled = true;
+      askStatus.textContent = 'Thinking\u2026';
+      askProposalContainer.innerHTML = '';
+      try {
+        const res = await fetch('/api/parse-update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: message, events: DATA.events, people: DATA.people, days: DATA.days })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Request failed.');
+        pendingProposal = data;
+        askStatus.textContent = '';
+        renderProposal(data, askProposalContainer, askName.value.trim());
+      } catch (err) {
+        askStatus.textContent = "Couldn't reach Claude: " + err.message;
+      } finally {
+        askSendBtn.disabled = false;
+      }
     });
   }
 
