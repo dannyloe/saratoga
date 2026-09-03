@@ -320,6 +320,85 @@
   .ask-cancel-btn { background: none; border: none; color: var(--muted); font-size: 0.85rem; text-decoration: underline; }
   .ask-examples { color: var(--muted); font-size: 0.8rem; margin-bottom: 20px; line-height: 1.6; }
 
+  /* ---- expenses ---- */
+  .expense-card {
+    border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; background: var(--paper-raised);
+    margin-bottom: 22px;
+  }
+  .expense-card h4 { margin: 0 0 14px; font-family: "Fraunces", Georgia, serif; }
+  .expense-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+  .expense-form-grid .span-2 { grid-column: 1 / -1; }
+  .expense-field label {
+    display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px;
+  }
+  .expense-field input, .expense-field select {
+    width: 100%; border: 1px solid var(--line); background: var(--paper); color: var(--ink-text);
+    border-radius: 6px; padding: 8px 10px; font-family: inherit; font-size: 0.9rem;
+  }
+  .expense-split-checks { display: flex; flex-wrap: wrap; gap: 10px 16px; }
+  .expense-split-check { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; }
+  .expense-split-check input { width: auto; }
+  .expense-add-person-row { display: flex; gap: 6px; margin-top: 8px; }
+  .expense-add-person-row input { flex: 1; }
+  .expense-add-person-row button {
+    border: 1px solid var(--line); background: var(--paper); color: var(--ink-text);
+    border-radius: 6px; padding: 6px 12px; font-size: 0.82rem; font-weight: 600;
+  }
+  .expense-add-person-row button:hover { border-color: var(--brass); color: var(--brass-strong); }
+  .expense-save-btn {
+    background: var(--brass-strong); color: var(--paper-raised); border: none;
+    border-radius: 999px; padding: 9px 20px; font-weight: 600; font-size: 0.88rem; margin-top: 14px;
+  }
+  .expense-save-btn:hover { background: var(--brass); }
+  .expense-form-status { color: var(--muted); font-size: 0.82rem; margin-top: 8px; min-height: 1.2em; }
+
+  .expense-total {
+    display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px;
+    font-family: "Fraunces", Georgia, serif; font-size: 1.1rem;
+  }
+  .expense-total .mono { color: var(--brass-strong); }
+  .expense-row {
+    display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line);
+  }
+  .expense-row:last-child { border-bottom: none; }
+  .expense-row-desc { font-weight: 600; }
+  .expense-row-meta { color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
+  .expense-row-split { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
+  .expense-row-right { text-align: right; white-space: nowrap; }
+  .expense-row-amount { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; }
+  .expense-remove-btn {
+    display: block; margin-top: 6px; background: none; border: none; color: var(--muted);
+    font-size: 0.78rem; text-decoration: underline;
+  }
+  .expense-remove-btn:hover { color: var(--brass-strong); }
+  .expense-empty { color: var(--muted); font-size: 0.9rem; padding: 10px 0; }
+
+  .settlement-row {
+    display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.9rem;
+  }
+  .settlement-row:last-child { border-bottom: none; }
+  .settlement-owed { color: #2e7d32; font-weight: 600; }
+  .settlement-owes { color: #b3441e; font-weight: 600; }
+  .settlement-settled { color: var(--muted); }
+  .settlement-transfer {
+    padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.88rem;
+  }
+  .settlement-transfer:last-child { border-bottom: none; }
+  .settlement-transfer .mono { color: var(--brass-strong); font-weight: 600; }
+
+  .backup-desc { color: var(--muted); font-size: 0.85rem; margin-bottom: 14px; line-height: 1.5; }
+  .backup-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+  .csv-upload-label {
+    display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;
+  }
+  .csv-upload-row input[type="file"] { font-size: 0.85rem; color: var(--ink-text); }
+  .csv-preview {
+    border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-top: 14px; background: var(--paper);
+  }
+  .csv-preview-actions { display: flex; gap: 10px; margin-top: 12px; }
+
   @media (max-width: 560px) {
     .event-card { grid-template-columns: 1fr; }
     .event-time { padding-top: 0; }
@@ -345,6 +424,7 @@
   <section class="view" id="view-person"></section>
   <section class="view" id="view-open"></section>
   <section class="view" id="view-log"></section>
+  <section class="view" id="view-expenses"></section>
   <section class="view" id="view-ask"></section>
 </main>
 
@@ -499,6 +579,8 @@
   tabs.appendChild(openBtn);
   const logBtn = pill('Update Log', () => showLog(), 'log-btn', null);
   tabs.appendChild(logBtn);
+  const expensesBtn = pill('Expenses', () => showExpenses(), 'expenses-btn', null);
+  tabs.appendChild(expensesBtn);
   const askBtn = pill('Tell Claude', () => showAsk(), 'ask-btn', null);
   tabs.appendChild(askBtn);
 
@@ -680,9 +762,10 @@
 
   const viewLog = document.getElementById('view-log');
   const viewAsk = document.getElementById('view-ask');
+  const viewExpenses = document.getElementById('view-expenses');
 
   function hideAllViews() {
-    [viewMaster, viewPerson, viewOpen, viewLog, viewAsk].forEach(v => v.classList.remove('active'));
+    [viewMaster, viewPerson, viewOpen, viewLog, viewExpenses, viewAsk].forEach(v => v.classList.remove('active'));
   }
 
   function showMaster() {
@@ -714,6 +797,14 @@
     viewLog.classList.add('active');
     setActive();
     document.querySelector('.log-btn').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  function showExpenses() {
+    renderExpenses();
+    hideAllViews();
+    viewExpenses.classList.add('active');
+    setActive();
+    document.querySelector('.expenses-btn').classList.add('active');
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   function showAsk() {
@@ -803,16 +894,18 @@
     else if (currentView === 'person') { renderPerson(currentPersonCode); }
     else if (currentView === 'open') { renderOpen(); }
     else if (currentView === 'log') { renderLog(); }
+    else if (currentView === 'expenses') { renderExpenses(); }
     // 'ask' is intentionally not auto-re-rendered here; applyProposal() handles its own UI update.
     recomputeBadgeAndNote();
   }
 
   // wrap show* to track current view
-  const _showMaster = showMaster, _showPerson = showPerson, _showOpen = showOpen, _showLog = showLog, _showAsk = showAsk;
+  const _showMaster = showMaster, _showPerson = showPerson, _showOpen = showOpen, _showLog = showLog, _showExpenses = showExpenses, _showAsk = showAsk;
   showMaster = function () { currentView = 'master'; _showMaster(); };
   showPerson = function (code) { currentView = 'person'; currentPersonCode = code; _showPerson(code); };
   showOpen = function () { currentView = 'open'; _showOpen(); };
   showLog = function () { currentView = 'log'; _showLog(); };
+  showExpenses = function () { currentView = 'expenses'; _showExpenses(); };
   showAsk = function () { currentView = 'ask'; _showAsk(); };
 
   // ---------- edit modal ----------
@@ -1156,6 +1249,484 @@
     });
   }
 
+  // ---------- expenses ----------
+  let expenses = [];
+  let customPeople = [];
+
+  async function loadExpenses() {
+    try {
+      const res = await fetch('/api/expenses');
+      const data = res.ok ? await res.json() : { expenses: [], customPeople: [] };
+      expenses = data.expenses || [];
+      customPeople = data.customPeople || [];
+    } catch (err) {
+      expenses = [];
+      customPeople = [];
+    }
+  }
+
+  async function saveExpenses() {
+    const res = await fetch('/api/expenses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expenses: expenses })
+    });
+    if (!res.ok) throw new Error('Failed to save expenses.');
+    expenses = await res.json();
+  }
+
+  async function saveCustomPeople() {
+    const res = await fetch('/api/people', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customPeople: customPeople })
+    });
+    if (!res.ok) throw new Error('Failed to save the new name.');
+    customPeople = await res.json();
+  }
+
+  function expenseRoster() {
+    const names = DATA.people.map(p => p.name);
+    customPeople.forEach(n => { if (!names.includes(n)) names.push(n); });
+    return names;
+  }
+
+  // Settlement math, ported as specified: work in integer cents to avoid
+  // floating-point rounding errors, then format back to dollars for display.
+  function computeBalancesCents(exps, allNames) {
+    const balance = {};
+    allNames.forEach(n => { balance[n] = 0; });
+    exps.forEach(ex => {
+      const amtCents = Math.round(ex.amount * 100);
+      if (balance[ex.paidBy] === undefined) balance[ex.paidBy] = 0;
+      balance[ex.paidBy] += amtCents;
+      const n = ex.splitBetween.length;
+      if (!n) return;
+      const share = Math.floor(amtCents / n);
+      const remainder = amtCents - share * n;
+      ex.splitBetween.forEach((p, i) => {
+        if (balance[p] === undefined) balance[p] = 0;
+        const s = share + (i < remainder ? 1 : 0); // spread leftover cents across the first few people
+        balance[p] -= s;
+      });
+    });
+    return balance; // positive = they're owed money, negative = they owe money
+  }
+
+  function simplifySettlement(balance) {
+    const creditors = [], debtors = [];
+    Object.keys(balance).forEach(p => {
+      const v = balance[p];
+      if (v > 0) creditors.push({ p: p, v: v });
+      else if (v < 0) debtors.push({ p: p, v: -v });
+    });
+    creditors.sort((a, b) => b.v - a.v);
+    debtors.sort((a, b) => b.v - a.v);
+    const transfers = [];
+    let i = 0, j = 0;
+    while (i < debtors.length && j < creditors.length) {
+      const pay = Math.min(debtors[i].v, creditors[j].v);
+      if (pay > 0) transfers.push({ from: debtors[i].p, to: creditors[j].p, amount: pay });
+      debtors[i].v -= pay;
+      creditors[j].v -= pay;
+      if (debtors[i].v === 0) i++;
+      if (creditors[j].v === 0) j++;
+    }
+    return transfers; // [{from, to, amount}], amount in cents
+  }
+
+  function fmtCents(cents) {
+    return '$' + (cents / 100).toFixed(2);
+  }
+
+  function fmtDateShort(iso) {
+    if (!iso) return '';
+    try {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    } catch (e) { return iso; }
+  }
+
+  function renderExpenseForm(container) {
+    const roster = expenseRoster();
+    container.innerHTML = `<div class="expense-card">
+      <h4>Add an expense</h4>
+      <div class="expense-form-grid">
+        <div class="expense-field span-2">
+          <label for="ex-desc">Description</label>
+          <input type="text" id="ex-desc" placeholder="e.g. Groceries for the Airbnb">
+        </div>
+        <div class="expense-field">
+          <label for="ex-amount">Amount</label>
+          <input type="number" id="ex-amount" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="expense-field">
+          <label for="ex-category">Category</label>
+          <select id="ex-category">
+            <option>Lodging</option>
+            <option>Food</option>
+            <option>Transport</option>
+            <option>Golf</option>
+            <option>Show</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="expense-field">
+          <label for="ex-paidby">Paid by</label>
+          <select id="ex-paidby">${roster.map(n => `<option>${escapeHtml(n)}</option>`).join('')}</select>
+        </div>
+        <div class="expense-field">
+          <label for="ex-date">Date (optional)</label>
+          <input type="date" id="ex-date">
+        </div>
+        <div class="expense-field span-2">
+          <label>Split between</label>
+          <div class="expense-split-checks" id="ex-split-checks">
+            ${roster.map(n => `<label class="expense-split-check"><input type="checkbox" value="${escapeHtml(n)}" checked> ${escapeHtml(n)}</label>`).join('')}
+          </div>
+          <div class="expense-add-person-row">
+            <input type="text" id="ex-add-person" placeholder="Add someone not listed">
+            <button type="button" id="ex-add-person-btn">Add</button>
+          </div>
+        </div>
+      </div>
+      <button class="expense-save-btn" id="ex-save-btn">Add expense</button>
+      <p class="expense-form-status" id="ex-form-status"></p>
+    </div>`;
+
+    document.getElementById('ex-add-person-btn').addEventListener('click', async () => {
+      const input = document.getElementById('ex-add-person');
+      const name = input.value.trim();
+      if (!name) return;
+      if (!expenseRoster().includes(name)) {
+        customPeople.push(name);
+        try {
+          await saveCustomPeople();
+        } catch (err) {
+          document.getElementById('ex-form-status').textContent = "Couldn't save that name \u2014 try again.";
+          return;
+        }
+      }
+      input.value = '';
+      renderExpenseForm(container); // rebuild so the new name appears in the dropdown and checkboxes
+    });
+
+    document.getElementById('ex-save-btn').addEventListener('click', async () => {
+      const desc = document.getElementById('ex-desc').value.trim();
+      const amount = parseFloat(document.getElementById('ex-amount').value);
+      const category = document.getElementById('ex-category').value;
+      const paidBy = document.getElementById('ex-paidby').value;
+      const date = document.getElementById('ex-date').value || null;
+      const split = Array.from(document.querySelectorAll('#ex-split-checks input:checked')).map(el => el.value);
+      const status = document.getElementById('ex-form-status');
+
+      if (!desc) { status.textContent = 'Please add a description.'; return; }
+      if (!amount || amount <= 0) { status.textContent = 'Please enter an amount greater than $0.'; return; }
+      if (!paidBy) { status.textContent = 'Please choose who paid.'; return; }
+      if (!split.length) { status.textContent = 'Please select at least one person to split with.'; return; }
+
+      const btn = document.getElementById('ex-save-btn');
+      btn.disabled = true;
+      status.textContent = '';
+      try {
+        expenses.push({
+          id: Date.now(),
+          description: desc,
+          amount: Math.round(amount * 100) / 100,
+          category: category,
+          paidBy: paidBy,
+          splitBetween: split,
+          date: date
+        });
+        await saveExpenses();
+        renderExpenses();
+      } catch (err) {
+        expenses.pop();
+        btn.disabled = false;
+        status.textContent = "Couldn't save \u2014 check your connection and try again.";
+      }
+    });
+  }
+
+  function renderLedger(container) {
+    const total = expenses.reduce((sum, ex) => sum + Math.round(ex.amount * 100), 0);
+    let html = `<div class="expense-card">
+      <div class="expense-total"><span>Total spent</span><span class="mono">${fmtCents(total)}</span></div>`;
+
+    if (!expenses.length) {
+      html += `<p class="expense-empty">No expenses logged yet.</p>`;
+    } else {
+      const sorted = expenses.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.id - a.id);
+      sorted.forEach(ex => {
+        html += `<div class="expense-row">
+          <div>
+            <div class="expense-row-desc">${escapeHtml(ex.description)}</div>
+            <div class="expense-row-meta">${escapeHtml(ex.paidBy)} paid &middot; ${escapeHtml(ex.category)}${ex.date ? ' &middot; ' + fmtDateShort(ex.date) : ''}</div>
+            <div class="expense-row-split">Split: ${escapeHtml(ex.splitBetween.join(', '))}</div>
+          </div>
+          <div class="expense-row-right">
+            <div class="expense-row-amount">${fmtCents(Math.round(ex.amount * 100))}</div>
+            <button class="expense-remove-btn" data-remove-expense="${ex.id}">Remove</button>
+          </div>
+        </div>`;
+      });
+    }
+    html += `</div>`;
+    container.innerHTML = html;
+
+    container.querySelectorAll('[data-remove-expense]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = Number(btn.getAttribute('data-remove-expense'));
+        const prev = expenses;
+        expenses = expenses.filter(ex => ex.id !== id);
+        try {
+          await saveExpenses();
+          renderExpenses();
+        } catch (err) {
+          expenses = prev;
+          alert("Couldn't remove that expense \u2014 check your connection and try again.");
+        }
+      });
+    });
+  }
+
+  function renderSettlement(container) {
+    const roster = expenseRoster();
+    const namesInvolved = new Set(roster);
+    expenses.forEach(ex => { namesInvolved.add(ex.paidBy); ex.splitBetween.forEach(p => namesInvolved.add(p)); });
+    const allNames = Array.from(namesInvolved);
+    const balance = computeBalancesCents(expenses, allNames);
+    const transfers = simplifySettlement(balance);
+
+    let html = `<div class="expense-card"><h4>Settlement</h4>`;
+    if (!expenses.length) {
+      html += `<p class="expense-empty">Add some expenses to see who owes what.</p></div>`;
+      container.innerHTML = html;
+      return;
+    }
+
+    allNames.sort().forEach(name => {
+      const v = balance[name] || 0;
+      let statusHtml;
+      if (v > 0) statusHtml = `<span class="settlement-owed">is owed ${fmtCents(v)}</span>`;
+      else if (v < 0) statusHtml = `<span class="settlement-owes">owes ${fmtCents(-v)}</span>`;
+      else statusHtml = `<span class="settlement-settled">settled up</span>`;
+      html += `<div class="settlement-row"><span>${escapeHtml(name)}</span>${statusHtml}</div>`;
+    });
+
+    html += `<h4 style="margin-top:20px;">Suggested payments</h4>`;
+    if (!transfers.length) {
+      html += `<p class="expense-empty">Everyone's already settled up.</p>`;
+    } else {
+      transfers.forEach(t => {
+        html += `<div class="settlement-transfer">${escapeHtml(t.from)} owes ${escapeHtml(t.to)} <span class="mono">${fmtCents(t.amount)}</span></div>`;
+      });
+    }
+    html += `</div>`;
+    container.innerHTML = html;
+  }
+
+  // ---------- backup & restore ----------
+  function downloadTextFile(filename, mimeType, text) {
+    const blob = new Blob([text], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function csvEscape(val) {
+    const s = String(val == null ? '' : val);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function expensesToCSV(exps) {
+    const headers = ['id', 'description', 'amount', 'category', 'paidBy', 'splitBetween', 'date'];
+    const lines = [headers.join(',')];
+    exps.forEach(ex => {
+      lines.push([
+        ex.id, ex.description, ex.amount, ex.category, ex.paidBy,
+        (ex.splitBetween || []).join('; '), ex.date || ''
+      ].map(csvEscape).join(','));
+    });
+    return lines.join('\n');
+  }
+
+  // Minimal RFC-4180-ish CSV parser: handles quoted fields, escaped quotes ("")
+  // inside quotes, and commas/newlines inside quoted fields.
+  function parseCSVText(text) {
+    const rows = [];
+    let row = [], field = '', inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else { inQuotes = false; }
+        } else {
+          field += c;
+        }
+      } else if (c === '"') {
+        inQuotes = true;
+      } else if (c === ',') {
+        row.push(field); field = '';
+      } else if (c === '\n') {
+        row.push(field); rows.push(row); row = []; field = '';
+      } else if (c === '\r') {
+        // skip \r, \n (if present) handles the line break
+      } else {
+        field += c;
+      }
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(r => r.some(cell => cell.trim() !== ''));
+  }
+
+  function csvRowsToExpenses(rows) {
+    if (!rows.length) return { valid: [], errors: ['The file is empty.'] };
+    const headers = rows[0].map(h => h.trim().toLowerCase());
+    const col = name => headers.indexOf(name);
+    const iDesc = col('description'), iAmount = col('amount'), iCategory = col('category'),
+      iPaidBy = col('paidby'), iSplit = col('splitbetween'), iDate = col('date');
+    if (iDesc === -1 || iAmount === -1 || iPaidBy === -1 || iSplit === -1) {
+      return { valid: [], errors: ['Missing required columns. Expected at least: description, amount, paidBy, splitBetween.'] };
+    }
+    const valid = [];
+    const errors = [];
+    rows.slice(1).forEach((r, idx) => {
+      const lineNum = idx + 2;
+      const description = (r[iDesc] || '').trim();
+      const amount = parseFloat(r[iAmount]);
+      const paidBy = (r[iPaidBy] || '').trim();
+      const split = (r[iSplit] || '').split(';').map(s => s.trim()).filter(Boolean);
+      if (!description) { errors.push(`Line ${lineNum}: missing description.`); return; }
+      if (!amount || isNaN(amount) || amount <= 0) { errors.push(`Line ${lineNum}: invalid amount.`); return; }
+      if (!paidBy) { errors.push(`Line ${lineNum}: missing paidBy.`); return; }
+      if (!split.length) { errors.push(`Line ${lineNum}: missing splitBetween.`); return; }
+      valid.push({
+        id: Date.now() + idx, // fresh ids on import, regardless of what's in the file's id column
+        description: description,
+        amount: Math.round(amount * 100) / 100,
+        category: (iCategory > -1 && r[iCategory] && r[iCategory].trim()) || 'Other',
+        paidBy: paidBy,
+        splitBetween: split,
+        date: (iDate > -1 && r[iDate] && r[iDate].trim()) || null
+      });
+    });
+    return { valid, errors };
+  }
+
+  function renderBackupSection(container) {
+    container.innerHTML = `<div class="expense-card">
+      <h4>Backup &amp; restore</h4>
+      <p class="backup-desc">The itinerary structure itself is already saved in GitHub \u2014 these
+        back up the parts that only live here: expenses, itinerary edits, and anything added through
+        the site. Worth doing occasionally, especially before a code change.</p>
+      <div class="backup-actions">
+        <button class="log-btn-action" id="ex-download-csv">Download expenses (CSV)</button>
+        <button class="log-btn-action secondary" id="ex-download-backup">Download full backup (JSON)</button>
+      </div>
+      <div class="csv-upload-row">
+        <label class="csv-upload-label" for="ex-csv-upload">Re-upload an expenses CSV</label>
+        <input type="file" id="ex-csv-upload" accept=".csv,text/csv">
+      </div>
+      <div id="ex-csv-preview"></div>
+    </div>`;
+
+    document.getElementById('ex-download-csv').addEventListener('click', () => {
+      downloadTextFile('loe-trip-expenses.csv', 'text/csv', expensesToCSV(expenses));
+    });
+
+    document.getElementById('ex-download-backup').addEventListener('click', async () => {
+      const btn = document.getElementById('ex-download-backup');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/backup');
+        if (!res.ok) throw new Error('Backup request failed.');
+        const data = await res.json();
+        downloadTextFile('loe-trip-backup.json', 'application/json', JSON.stringify(data, null, 2));
+      } catch (err) {
+        alert("Couldn't download the backup \u2014 check your connection and try again.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('ex-csv-upload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const rows = parseCSVText(String(reader.result));
+        const { valid, errors } = csvRowsToExpenses(rows);
+        const preview = document.getElementById('ex-csv-preview');
+        let html = `<div class="csv-preview">`;
+        if (!valid.length) {
+          html += `<p>Couldn't find any usable rows in that file.</p>`;
+          if (errors.length) html += `<p style="color:var(--muted); font-size:0.82rem;">${errors.slice(0, 5).map(escapeHtml).join('<br>')}</p>`;
+          html += `</div>`;
+          preview.innerHTML = html;
+          return;
+        }
+        html += `<p><strong>${valid.length}</strong> expense${valid.length === 1 ? '' : 's'} found${errors.length ? ` (${errors.length} row${errors.length === 1 ? '' : 's'} skipped)` : ''}.</p>`;
+        if (errors.length) {
+          html += `<p style="color:var(--muted); font-size:0.8rem;">${errors.slice(0, 5).map(escapeHtml).join('<br>')}</p>`;
+        }
+        html += `<div class="csv-preview-actions">
+          <button class="log-btn-action" id="csv-replace-btn">Replace current ledger</button>
+          <button class="log-btn-action secondary" id="csv-append-btn">Add to current ledger</button>
+          <button class="modal-cancel" id="csv-cancel-btn">Cancel</button>
+        </div></div>`;
+        preview.innerHTML = html;
+
+        document.getElementById('csv-cancel-btn').addEventListener('click', () => {
+          preview.innerHTML = '';
+          e.target.value = '';
+        });
+        document.getElementById('csv-replace-btn').addEventListener('click', async () => {
+          const prev = expenses;
+          expenses = valid;
+          try {
+            await saveExpenses();
+            renderExpenses();
+          } catch (err) {
+            expenses = prev;
+            alert("Couldn't save \u2014 check your connection and try again.");
+          }
+        });
+        document.getElementById('csv-append-btn').addEventListener('click', async () => {
+          const prev = expenses;
+          expenses = expenses.concat(valid);
+          try {
+            await saveExpenses();
+            renderExpenses();
+          } catch (err) {
+            expenses = prev;
+            alert("Couldn't save \u2014 check your connection and try again.");
+          }
+        });
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  function renderExpenses() {
+    viewExpenses.innerHTML = `<h2 class="display" style="margin-top:0;">Expenses</h2>
+      <p style="color:var(--muted); margin-top:-6px; margin-bottom:20px;">Log shared costs and see who owes what \u2014 visible to everyone with this link.</p>
+      <div id="ex-form-container"></div>
+      <div id="ex-ledger-container"></div>
+      <div id="ex-settlement-container"></div>
+      <div id="ex-backup-container"></div>`;
+    renderExpenseForm(document.getElementById('ex-form-container'));
+    renderLedger(document.getElementById('ex-ledger-container'));
+    renderSettlement(document.getElementById('ex-settlement-container'));
+    renderBackupSection(document.getElementById('ex-backup-container'));
+  }
+
   // ---------- ask claude (chat-to-update) ----------
   let pendingProposal = null;
 
@@ -1300,6 +1871,7 @@
     await loadOverrides();
     await loadNewEvents();
     await loadLastExportAt();
+    await loadExpenses();
     applyOverrides();
     renderMaster();
     showMaster();
