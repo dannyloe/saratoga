@@ -14,7 +14,7 @@ function loadStore() {
   try {
     return JSON.parse(fs.readFileSync(dataPath, 'utf8'));
   } catch (err) {
-    return { overrides: {}, meta: {}, newEvents: [] };
+    return { overrides: {}, meta: {}, newEvents: [], expenses: [], customPeople: [] };
   }
 }
 
@@ -26,7 +26,7 @@ function saveStore(store) {
 }
 
 if (!fs.existsSync(dataPath)) {
-  saveStore({ overrides: {}, meta: {}, newEvents: [] });
+  saveStore({ overrides: {}, meta: {}, newEvents: [], expenses: [], customPeople: [] });
 }
 
 const app = express();
@@ -58,6 +58,35 @@ app.post('/api/new-events', (req, res) => {
   store.newEvents = Array.isArray(req.body) ? req.body : [];
   saveStore(store);
   res.json(store.newEvents);
+});
+
+// ---- expenses: shared trip expense ledger ----
+app.get('/api/expenses', (req, res) => {
+  const store = loadStore();
+  res.json({ expenses: store.expenses || [], customPeople: store.customPeople || [] });
+});
+
+app.post('/api/expenses', (req, res) => {
+  const store = loadStore();
+  store.expenses = Array.isArray(req.body.expenses) ? req.body.expenses : [];
+  saveStore(store);
+  res.json(store.expenses);
+});
+
+app.post('/api/people', (req, res) => {
+  const store = loadStore();
+  store.customPeople = Array.isArray(req.body.customPeople) ? req.body.customPeople : [];
+  saveStore(store);
+  res.json(store.customPeople);
+});
+
+// ---- backup: the entire live-edited data store, read straight from disk ----
+// (the base itinerary structure itself lives in GitHub already; this covers
+// everything that only exists in the Railway Volume \u2014 overrides, new
+// events, expenses, and custom people.)
+app.get('/api/backup', (req, res) => {
+  const store = loadStore();
+  res.json(store);
 });
 
 // ---- meta: small key/value store (e.g. "log-last-export" timestamp) ----
