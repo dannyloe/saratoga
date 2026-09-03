@@ -1347,42 +1347,40 @@
     } catch (e) { return iso; }
   }
 
-  function renderExpenseForm(container) {
+  function renderExpenseForm(container, editExpense) {
     const roster = expenseRoster();
+    const editing = !!editExpense;
     container.innerHTML = `<div class="expense-card">
-      <h4>Add an expense</h4>
+      <h4>${editing ? 'Edit expense' : 'Add an expense'}</h4>
       <div class="expense-form-grid">
         <div class="expense-field span-2">
           <label for="ex-desc">Description</label>
-          <input type="text" id="ex-desc" placeholder="e.g. Groceries for the Airbnb">
+          <input type="text" id="ex-desc" placeholder="e.g. Groceries for the Airbnb" value="${editing ? escapeHtml(editExpense.description) : ''}">
         </div>
         <div class="expense-field">
           <label for="ex-amount">Amount</label>
-          <input type="number" id="ex-amount" step="0.01" min="0" placeholder="0.00">
+          <input type="number" id="ex-amount" step="0.01" min="0" placeholder="0.00" value="${editing ? editExpense.amount : ''}">
         </div>
         <div class="expense-field">
           <label for="ex-category">Category</label>
           <select id="ex-category">
-            <option>Lodging</option>
-            <option>Food</option>
-            <option>Transport</option>
-            <option>Golf</option>
-            <option>Show</option>
-            <option>Other</option>
+            ${['Lodging', 'Food', 'Transport', 'Golf', 'Show', 'Other'].map(c =>
+              `<option${editing && editExpense.category === c ? ' selected' : ''}>${c}</option>`).join('')}
           </select>
         </div>
         <div class="expense-field">
           <label for="ex-paidby">Paid by</label>
-          <select id="ex-paidby">${roster.map(n => `<option>${escapeHtml(n)}</option>`).join('')}</select>
+          <select id="ex-paidby">${roster.map(n =>
+            `<option${editing && editExpense.paidBy === n ? ' selected' : ''}>${escapeHtml(n)}</option>`).join('')}</select>
         </div>
         <div class="expense-field">
           <label for="ex-date">Date (optional)</label>
-          <input type="date" id="ex-date">
+          <input type="date" id="ex-date" value="${editing && editExpense.date ? editExpense.date : ''}">
         </div>
         <div class="expense-field span-2">
           <label>Split between</label>
           <div class="expense-split-checks" id="ex-split-checks">
-            ${roster.map(n => `<label class="expense-split-check"><input type="checkbox" value="${escapeHtml(n)}" checked> ${escapeHtml(n)}</label>`).join('')}
+            ${roster.map(n => `<label class="expense-split-check"><input type="checkbox" value="${escapeHtml(n)}"${(!editing || (editExpense.splitBetween || []).includes(n)) ? ' checked' : ''}> ${escapeHtml(n)}</label>`).join('')}
           </div>
           <div class="expense-add-person-row">
             <input type="text" id="ex-add-person" placeholder="Add someone not listed">
@@ -1390,7 +1388,10 @@
           </div>
         </div>
       </div>
-      <button class="expense-save-btn" id="ex-save-btn">Add expense</button>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <button class="expense-save-btn" id="ex-save-btn">${editing ? 'Save changes' : 'Add expense'}</button>
+        ${editing ? '<button type="button" class="ask-cancel-btn" id="ex-cancel-edit-btn">Cancel edit</button>' : ''}
+      </div>
       <p class="expense-form-status" id="ex-form-status"></p>
     </div>`;
 
@@ -1408,8 +1409,14 @@
         }
       }
       input.value = '';
-      renderExpenseForm(container); // rebuild so the new name appears in the dropdown and checkboxes
+      renderExpenseForm(container, editExpense); // rebuild so the new name appears in the dropdown and checkboxes
     });
+
+    if (editing) {
+      document.getElementById('ex-cancel-edit-btn').addEventListener('click', () => {
+        renderExpenseForm(container, null);
+      });
+    }
 
     document.getElementById('ex-save-btn').addEventListener('click', async () => {
       const desc = document.getElementById('ex-desc').value.trim();
@@ -1428,22 +1435,32 @@
       const btn = document.getElementById('ex-save-btn');
       btn.disabled = true;
       status.textContent = '';
+      const prevExpenses = expenses.slice();
       try {
-        expenses.push({
-          id: Date.now(),
-          description: desc,
-          amount: Math.round(amount * 100) / 100,
-          category: category,
-          paidBy: paidBy,
-          splitBetween: split,
-          date: date
-        });
+        if (editing) {
+          const idx = expenses.findIndex(ex => ex.id === editExpense.id);
+          if (idx === -1) throw new Error('That expense no longer exists \u2014 it may have been removed elsewhere.');
+          expenses[idx] = Object.assign({}, expenses[idx], {
+            description: desc, amount: Math.round(amount * 100) / 100,
+            category: category, paidBy: paidBy, splitBetween: split, date: date
+          });
+        } else {
+          expenses.push({
+            id: Date.now(),
+            description: desc,
+            amount: Math.round(amount * 100) / 100,
+            category: category,
+            paidBy: paidBy,
+            splitBetween: split,
+            date: date
+          });
+        }
         await saveExpenses();
         renderExpenses();
       } catch (err) {
-        expenses.pop();
+        expenses = prevExpenses;
         btn.disabled = false;
-        status.textContent = "Couldn't save \u2014 check your connection and try again.";
+        status.textContent = err.message || "Couldn't save \u2014 check your connection and try again.";
       }
     });
   }
@@ -1466,6 +1483,7 @@
           </div>
           <div class="expense-row-right">
             <div class="expense-row-amount">${fmtCents(Math.round(ex.amount * 100))}</div>
+            <button class="expense-remove-btn" data-edit-expense="${ex.id}">Edit</button>
             <button class="expense-remove-btn" data-remove-expense="${ex.id}">Remove</button>
           </div>
         </div>`;
@@ -1474,11 +1492,24 @@
     html += `</div>`;
     container.innerHTML = html;
 
+    container.querySelectorAll('[data-edit-expense]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = Number(btn.getAttribute('data-edit-expense'));
+        const ex = expenses.find(e => e.id === id);
+        if (!ex) return;
+        const formContainer = document.getElementById('ex-form-container');
+        renderExpenseForm(formContainer, ex);
+        formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
     container.querySelectorAll('[data-remove-expense]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = Number(btn.getAttribute('data-remove-expense'));
+        const ex = expenses.find(e => e.id === id);
+        if (ex && !confirm(`Remove "${ex.description}" (${fmtCents(Math.round(ex.amount * 100))})?`)) return;
         const prev = expenses;
-        expenses = expenses.filter(ex => ex.id !== id);
+        expenses = expenses.filter(e => e.id !== id);
         try {
           await saveExpenses();
           renderExpenses();
