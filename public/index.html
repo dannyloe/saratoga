@@ -262,6 +262,14 @@
     padding: 6px 20px 0; max-width: 920px; margin: 0 auto;
   }
 
+  .load-failure-banner {
+    background: #7a2222; color: #fff2f0; padding: 14px 20px; text-align: center; font-size: 0.9rem;
+  }
+  .load-failure-banner button {
+    background: #fff2f0; color: #7a2222; border: none; border-radius: 999px;
+    padding: 6px 16px; font-weight: 700; margin-left: 12px; font-size: 0.85rem;
+  }
+
   /* ---- update log ---- */
   .log-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 18px; }
   .log-btn-action {
@@ -418,6 +426,7 @@
   </div>
 </header>
 <div class="marquee-rule"></div>
+<div id="load-failure-banner" style="display:none;"></div>
 
 <main>
   <section class="view active" id="view-master"></section>
@@ -821,6 +830,7 @@
   const NEW_EVENTS_KEY = 'new-events';
   let overrides = {};       // { eventId: {time, location, room, conf, payStatus, notes, who, lastEdited} }
   let newEvents = [];       // [ full event objects added by the group ]
+  let dataLoadFailed = false; // true if any initial load failed \u2014 blocks all saves to prevent overwriting real data with an empty/partial state
   let currentView = 'master';
   let currentPersonCode = null;
   const syncNote = document.getElementById('sync-note');
@@ -828,22 +838,27 @@
   async function loadOverrides() {
     try {
       const res = await fetch('/api/overrides');
-      overrides = res.ok ? await res.json() : {};
+      if (!res.ok) throw new Error('Request failed: ' + res.status);
+      overrides = await res.json();
     } catch (err) {
-      overrides = {};
+      dataLoadFailed = true;
+      overrides = {}; // last resort so rendering doesn't crash \u2014 saves are blocked by dataLoadFailed
     }
   }
 
   async function loadNewEvents() {
     try {
       const res = await fetch('/api/new-events');
-      newEvents = res.ok ? await res.json() : [];
+      if (!res.ok) throw new Error('Request failed: ' + res.status);
+      newEvents = await res.json();
     } catch (err) {
+      dataLoadFailed = true;
       newEvents = [];
     }
   }
 
   async function saveNewEvents(latest) {
+    assertDataLoaded();
     await fetch('/api/new-events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -853,6 +868,28 @@
 
   function payKindToLabel(kind) {
     return { paid: 'Paid', unpaid: 'Unpaid', pending: 'Pending', hidden: 'Hidden' }[kind] || '';
+  }
+
+  // Called at the top of every function that writes data. If the initial
+  // page load didn't fully succeed, refuse to save \u2014 saving a partial or
+  // empty in-memory state back to the server would overwrite real data.
+  function assertDataLoaded() {
+    if (dataLoadFailed) {
+      throw new Error("This page didn't fully load the latest saved data, so saving is paused to avoid overwriting anything. Reload the page and try again.");
+    }
+  }
+
+  async function saveOverridePatch(id, patch) {
+    assertDataLoaded();
+    const merged = Object.assign({}, overrides[id] || {}, patch);
+    const res = await fetch('/api/overrides/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(merged)
+    });
+    if (!res.ok) throw new Error('Save failed.');
+    overrides[id] = await res.json();
+    return overrides[id];
   }
 
   function applyOverrides() {
@@ -1068,7 +1105,7 @@
         newEvents.pop();
         mSave.disabled = false;
         mSave.textContent = 'Add event';
-        mStatus.textContent = "Couldn't save \u2014 check your connection and try again.";
+        mStatus.textContent = err.message || "Couldn't save \u2014 check your connection and try again.";
       }
       return;
     }
@@ -1085,21 +1122,14 @@
     };
     mSave.textContent = 'Saving\u2026';
     try {
-      const merged = Object.assign({}, overrides[editingId] || {}, patch);
-      const res = await fetch('/api/overrides/' + editingId, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(merged)
-      });
-      if (!res.ok) throw new Error('Save failed');
-      overrides[editingId] = await res.json();
+      await saveOverridePatch(editingId, patch);
       applyOverrides();
       closeModal();
       reRenderCurrentView();
     } catch (err) {
       mSave.disabled = false;
       mSave.textContent = 'Save update';
-      mStatus.textContent = "Couldn't save \u2014 check your connection and try again.";
+      mStatus.textContent = err.message || "Couldn't save \u2014 check your connection and try again.";
     }
   });
 
@@ -1256,16 +1286,19 @@
   async function loadExpenses() {
     try {
       const res = await fetch('/api/expenses');
-      const data = res.ok ? await res.json() : { expenses: [], customPeople: [] };
+      if (!res.ok) throw new Error('Request failed: ' + res.status);
+      const data = await res.json();
       expenses = data.expenses || [];
       customPeople = data.customPeople || [];
     } catch (err) {
+      dataLoadFailed = true;
       expenses = [];
       customPeople = [];
     }
   }
 
   async function saveExpenses() {
+    assertDataLoaded();
     const res = await fetch('/api/expenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1276,6 +1309,7 @@
   }
 
   async function saveCustomPeople() {
+    assertDataLoaded();
     const res = await fetch('/api/people', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1673,6 +1707,55 @@
     return { valid, errors };
   }
 
+  function fmtBackupName(filename) {
+    // filename like backup-2026-09-04T03-04-15-566Z.json
+    const iso = filename.replace('backup-', '').replace('.json', '').replace(
+      /^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/, '$1T$2:$3:$4.$5Z'
+    );
+    return fmtWhen(iso) || filename;
+  }
+
+  async function renderBackupHistory(container) {
+    container.innerHTML = `<p style="color:var(--muted); font-size:0.85rem;">Loading snapshot history\u2026</p>`;
+    let files = [];
+    try {
+      const res = await fetch('/api/backups');
+      files = res.ok ? await res.json() : [];
+    } catch (err) {
+      container.innerHTML = `<p style="color:var(--muted); font-size:0.85rem;">Couldn't load snapshot history.</p>`;
+      return;
+    }
+    if (!files.length) {
+      container.innerHTML = `<p style="color:var(--muted); font-size:0.85rem;">No automatic snapshots yet \u2014 one is taken before every save.</p>`;
+      return;
+    }
+    container.innerHTML = `<p style="color:var(--muted); font-size:0.82rem; margin-bottom:8px;">
+      A snapshot of everything is saved automatically before every change. If something ever looks
+      wrong, you can restore any of the last ${files.length} versions below.</p>
+      ${files.slice(0, 15).map(f => `<div class="settlement-row">
+        <span>${escapeHtml(fmtBackupName(f))}</span>
+        <button class="expense-remove-btn" data-restore-backup="${escapeHtml(f)}" style="margin-top:0;">Restore this version</button>
+      </div>`).join('')}`;
+
+    container.querySelectorAll('[data-restore-backup]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const filename = btn.getAttribute('data-restore-backup');
+        if (!confirm(`Restore everything to the version from ${fmtBackupName(filename)}? This replaces current expenses and itinerary edits with that snapshot (today's current state is itself backed up first, so this can be undone).`)) return;
+        btn.disabled = true;
+        btn.textContent = 'Restoring\u2026';
+        try {
+          const res = await fetch('/api/backups/' + encodeURIComponent(filename) + '/restore', { method: 'POST' });
+          if (!res.ok) throw new Error('Restore failed.');
+          location.reload(); // simplest reliable way to reflect a full-store restore everywhere
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = 'Restore this version';
+          alert("Couldn't restore that version \u2014 check your connection and try again.");
+        }
+      });
+    });
+  }
+
   function renderBackupSection(container) {
     container.innerHTML = `<div class="expense-card">
       <h4>Backup &amp; restore</h4>
@@ -1688,7 +1771,10 @@
         <input type="file" id="ex-csv-upload" accept=".csv,text/csv">
       </div>
       <div id="ex-csv-preview"></div>
+      <h4 style="margin-top:22px;">Automatic snapshot history</h4>
+      <div id="ex-backup-history"></div>
     </div>`;
+    renderBackupHistory(document.getElementById('ex-backup-history'));
 
     document.getElementById('ex-download-csv').addEventListener('click', () => {
       downloadTextFile('loe-trip-expenses.csv', 'text/csv', expensesToCSV(expenses));
@@ -1835,17 +1921,11 @@
   }
 
   async function applyProposal(data, editorName) {
+    assertDataLoaded();
     const lastEdited = { by: editorName || 'a group member', at: new Date().toISOString() };
     for (const change of (data.changes || [])) {
       if (change.type === 'update' && change.eventId != null) {
-        const merged = Object.assign({}, overrides[change.eventId] || {}, change.patch || {}, { lastEdited });
-        const res = await fetch('/api/overrides/' + change.eventId, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(merged)
-        });
-        if (!res.ok) throw new Error('Failed to save an update.');
-        overrides[change.eventId] = await res.json();
+        await saveOverridePatch(change.eventId, Object.assign({}, change.patch || {}, { lastEdited }));
       } else if (change.type === 'create' && change.event) {
         const ev = change.event;
         const conf = ev.conf || null;
@@ -1918,6 +1998,34 @@
     });
   }
 
+  function renderLoadFailureBanner() {
+    const banner = document.getElementById('load-failure-banner');
+    if (!dataLoadFailed) {
+      banner.style.display = 'none';
+      banner.innerHTML = '';
+      return;
+    }
+    banner.style.display = 'block';
+    banner.innerHTML = `<div class="load-failure-banner">
+      Couldn't load the latest saved data \u2014 editing and adding are paused so nothing gets
+      accidentally overwritten. <button type="button" id="retry-load-btn">Retry</button>
+    </div>`;
+    document.getElementById('retry-load-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('retry-load-btn');
+      btn.disabled = true;
+      btn.textContent = 'Retrying\u2026';
+      dataLoadFailed = false;
+      await loadOverrides();
+      await loadNewEvents();
+      await loadExpenses();
+      renderLoadFailureBanner();
+      if (!dataLoadFailed) {
+        applyOverrides();
+        reRenderCurrentView();
+      }
+    });
+  }
+
   // ---------- init ----------
   (async function init() {
     syncNote.textContent = 'Loading shared updates\u2026';
@@ -1925,6 +2033,7 @@
     await loadNewEvents();
     await loadLastExportAt();
     await loadExpenses();
+    renderLoadFailureBanner();
     applyOverrides();
     renderMaster();
     showMaster();
