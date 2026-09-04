@@ -1521,15 +1521,37 @@
     });
   }
 
+  // For settlement purposes only (not the ledger, which keeps individual
+  // names), each wife's balance rolls into her husband's \u2014 they settle
+  // as one unit even though expenses are logged per person.
+  const SETTLEMENT_ALIASES = {
+    'Brooke Loe': 'Danny Loe',
+    'Stacy Ralston': 'Ed Ralston',
+    'Kim Hunter': 'Bo Hunter',
+    'Lauren Magdeburg': 'JR Magdeburg',
+    'Neely Wasinger': 'Cole Wasinger'
+  };
+  function settlementName(name) {
+    return SETTLEMENT_ALIASES[name] || name;
+  }
+  function toSettlementExpenses(exps) {
+    return exps.map(ex => Object.assign({}, ex, {
+      paidBy: settlementName(ex.paidBy),
+      splitBetween: ex.splitBetween.map(settlementName)
+    }));
+  }
+
   function renderSettlement(container) {
     const roster = expenseRoster();
-    const namesInvolved = new Set(roster);
-    expenses.forEach(ex => { namesInvolved.add(ex.paidBy); ex.splitBetween.forEach(p => namesInvolved.add(p)); });
+    const namesInvolved = new Set(roster.map(settlementName));
+    expenses.forEach(ex => { namesInvolved.add(settlementName(ex.paidBy)); ex.splitBetween.forEach(p => namesInvolved.add(settlementName(p))); });
     const allNames = Array.from(namesInvolved);
-    const balance = computeBalancesCents(expenses, allNames);
+    const settlementExpenses = toSettlementExpenses(expenses);
+    const balance = computeBalancesCents(settlementExpenses, allNames);
     const transfers = simplifySettlement(balance);
 
-    let html = `<div class="expense-card"><h4>Settlement</h4>`;
+    let html = `<div class="expense-card"><h4>Settlement</h4>
+      <p class="backup-desc" style="margin-bottom:16px;">Couples settle as one \u2014 each wife's share rolls into her husband's balance here (the ledger above still shows who actually paid or was included).</p>`;
     if (!expenses.length) {
       html += `<p class="expense-empty">Add some expenses to see who owes what.</p></div>`;
       container.innerHTML = html;
