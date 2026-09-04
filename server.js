@@ -10,6 +10,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataPath = process.env.DATA_PATH || path.join(__dirname, 'trip-data.json');
 fs.mkdirSync(path.dirname(dataPath), { recursive: true });
 
+const backupsDir = path.join(path.dirname(dataPath), 'backups');
+fs.mkdirSync(backupsDir, { recursive: true });
+const MAX_BACKUPS = 40; // roughly a couple weeks of history at a few writes/day
+
 function loadStore() {
   try {
     return JSON.parse(fs.readFileSync(dataPath, 'utf8'));
@@ -18,7 +22,26 @@ function loadStore() {
   }
 }
 
+// Copies whatever is currently on disk into backups/ before it gets
+// overwritten, so any write \u2014 whether from a real edit or a bug \u2014 can be
+// undone. Keeps only the most recent MAX_BACKUPS snapshots.
+function snapshotBeforeWrite() {
+  if (!fs.existsSync(dataPath)) return;
+  try {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    fs.copyFileSync(dataPath, path.join(backupsDir, `backup-${stamp}.json`));
+    const files = fs.readdirSync(backupsDir).filter(f => f.startsWith('backup-')).sort();
+    while (files.length > MAX_BACKUPS) {
+      fs.unlinkSync(path.join(backupsDir, files.shift()));
+    }
+  } catch (err) {
+    // A failed backup should never block the actual save.
+    console.error('Backup snapshot failed:', err.message);
+  }
+}
+
 function saveStore(store) {
+  snapshotBeforeWrite();
   // Write to a temp file then rename, so a crash mid-write can't corrupt the file.
   const tmp = dataPath + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(store, null, 2));
@@ -87,6 +110,39 @@ app.post('/api/people', (req, res) => {
 app.get('/api/backup', (req, res) => {
   const store = loadStore();
   res.json(store);
+});
+
+// ---- backup history: browse and restore previous snapshots ----
+app.get('/api/backups', (req, res) => {
+  try {
+    const files = fs.readdirSync(backupsDir)
+      .filter(f => f.startsWith('backup-'))
+      .sort()
+      .reverse();
+    res.json(files);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+app.get('/api/backups/:filename', (req, res) => {
+  const filename = path.basename(req.params.filename); // guard against path traversal
+  const filePath = path.join(backupsDir, filename);
+  if (!filename.startsWith('backup-') || !fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Backup not found.' });
+  }
+  res.json(JSON.parse(fs.readFileSync(filePath, 'utf8')));
+});
+
+app.post('/api/backups/:filename/restore', (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const filePath = path.join(backupsDir, filename);
+  if (!filename.startsWith('backup-') || !fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Backup not found.' });
+  }
+  const restored = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  saveStore(restored); // this itself snapshots the current (soon-to-be-replaced) state first
+  res.json(restored);
 });
 
 // ---- meta: small key/value store (e.g. "log-last-export" timestamp) ----
